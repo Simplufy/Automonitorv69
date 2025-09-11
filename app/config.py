@@ -3,7 +3,7 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://localhost/autoprofit"
-    ADMIN_PASSPHRASE: str = "letmein123"
+    ADMIN_PASSPHRASE: str = "CHANGE_ME_IMMEDIATELY"
 
     APIFY_TOKEN: str | None = None
     APIFY_ACTOR_ID: str | None = None

@@ -16,6 +16,14 @@ app.include_router(web_fetch_router)
 
 @app.on_event("startup")
 async def startup_event():
+    # Security check: prevent running with insecure default admin password
+    from app.config import settings
+    if settings.ADMIN_PASSPHRASE == "CHANGE_ME_IMMEDIATELY":
+        raise ValueError(
+            "Security Error: Application cannot start with default admin passphrase. "
+            "Please set ADMIN_PASSPHRASE environment variable with a secure password."
+        )
+    
     # Initialize database tables if they don't exist
     from app.db import engine
     from app.models import Base
