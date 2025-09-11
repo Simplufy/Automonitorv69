@@ -1,0 +1,85 @@
+
+{% extends "base.html" %}
+{% block title %}Admin · Autoprofit{% endblock %}
+
+{% block content %}
+<h1>Admin</h1>
+
+<div class="card">
+  <h2>Data Ingestion</h2>
+
+  <form method="post" action="/admin/fetch" style="margin-top: 0.5rem;">
+    <button type="submit" class="btn">Fetch Latest Listings</button>
+  </form>
+  
+  <a href="/admin/test-apify" target="_blank" style="margin-top: 0.5rem; display: inline-block;">
+    <button type="button" class="btn" style="background-color: #007bff;">Test Apify Connection</button>
+  </a>
+
+  <form method="post" action="/admin/bulk_replace_appraisals" enctype="multipart/form-data" style="margin-top: 0.75rem;">
+    <label for="csv">Bulk replace Appraisals (CSV)</label><br/>
+    <input type="file" id="csv" name="csv" accept=".csv" required />
+    <button type="submit" class="btn" style="margin-left: .5rem;">Upload</button>
+  </form>
+
+  {% if request.query_params.get('fetched') %}
+    <p style="color: green; margin-top: 0.75rem;">
+      Imported {{ request.query_params.get('fetched') }} listings
+      (skipped {{ request.query_params.get('skipped') }}).
+    </p>
+  {% endif %}
+
+  {% if request.query_params.get('appraisals_replaced') %}
+    <p style="color: green; margin-top: 0.5rem;">
+      Replaced {{ request.query_params.get('appraisals_replaced') }} appraisals.
+    </p>
+  {% endif %}
+
+  {% if request.query_params.get('error') %}
+    <p style="color: crimson; margin-top: 0.5rem;">
+      {{ request.query_params.get('error') }}
+    </p>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-top: 1rem;">
+  <h2>Data Management</h2>
+  <a href="/admin/raw-listings" class="btn" style="margin-bottom: 0.5rem;">View Raw Listings</a>
+  <p style="font-size: 0.9em; color: #666;">See all imported listings with their raw data and timestamps</p>
+</div>
+
+<div class="card" style="margin-top: 1rem;">
+  <h2>Database Status</h2>
+  
+  <h3 style="margin-bottom: 0.5rem; color: #333;">Appraisal Database</h3>
+  <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+    <p style="margin: 0.25rem 0;"><strong>Count:</strong> {{ appraisal_stats.count }} appraisals</p>
+    {% if appraisal_stats.latest_update %}
+      <p style="margin: 0.25rem 0;"><strong>Last Updated:</strong> {{ appraisal_stats.latest_update.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    {% endif %}
+    {% if appraisal_stats.sample_entry %}
+      <p style="margin: 0.25rem 0;"><strong>Latest Entry:</strong> {{ appraisal_stats.sample_entry }}</p>
+    {% endif %}
+    {% if appraisal_stats.count == 0 %}
+      <p style="margin: 0.25rem 0; color: #dc3545;"><em>No appraisals found - upload a CSV to get started</em></p>
+    {% endif %}
+  </div>
+  
+  <h3 style="margin-bottom: 0.5rem; color: #333;">Listings Database</h3>
+  <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px;">
+    <p style="margin: 0.25rem 0;"><strong>Count:</strong> {{ listing_stats.count }} listings</p>
+    {% if listing_stats.latest_ingest %}
+      <p style="margin: 0.25rem 0;"><strong>Last Fetched:</strong> {{ listing_stats.latest_ingest.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    {% endif %}
+    {% if listing_stats.count == 0 %}
+      <p style="margin: 0.25rem 0; color: #dc3545;"><em>No listings found - click "Fetch Latest Listings" to import data</em></p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top: 1rem;">
+  <h2>Settings</h2>
+  <p>APIFY Actor: <code>{{ settings.APIFY_ACTOR_ID if settings is defined else '—' }}</code></p>
+  <p>Database File: <code>app.db</code> (persists between sessions)</p>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+
+{% extends "base.html" %}
+{% block title %}Raw Listings · Autoprofit{% endblock %}
+
+{% block content %}
+<h1>Raw Listings</h1>
+
+<div style="margin-bottom: 1rem;">
+  <a href="/admin" class="btn">← Back to Admin</a>
+</div>
+
+<div class="card">
+  <h2>Latest 100 Imported Listings</h2>
+  <p>Total listings: {{ listings|length }}</p>
+  
+  {% if listings %}
+    <div style="overflow-x: auto; margin-top: 1rem;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f5f5f5;">
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Imported At</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">VIN</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Year</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Make</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Model</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Trim</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Price</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Mileage</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Location</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Source</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Raw Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for listing in listings %}
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-size: 0.9em;">
+              {{ listing.ingested_at.strftime('%Y-%m-%d %H:%M:%S') if listing.ingested_at else 'N/A' }}
+            </td>
+            <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace; font-size: 0.9em;">
+              {{ listing.vin[:10] }}...
+            </td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ listing.year }}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ listing.make }}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ listing.model }}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ listing.trim or '' }}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${{ "{:,}".format(listing.price) }}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ "{:,}".format(listing.mileage) if listing.mileage else '' }}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ listing.location or '' }}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ listing.source }}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">
+              {% if listing.raw %}
+                <details>
+                  <summary style="cursor: pointer; color: blue;">View Raw</summary>
+                  <pre style="background: #f5f5f5; padding: 10px; margin-top: 5px; overflow: auto; max-height: 200px; font-size: 0.8em;">{{ listing.raw | tojson(indent=2) }}</pre>
+                </details>
+              {% else %}
+                <em>No raw data</em>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p style="color: #666; font-style: italic;">No listings found. Try clicking "Fetch Latest Listings" to import some data.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Appraisals</h2>
+<form method="post" action="/admin/appraisals/upload_csv" enctype="multipart/form-data">
+  <input type="file" name="file" accept=".csv">
+  <button class="btn" type="submit">Bulk Replace CSV</button>
+</form>
+<table>
+  <thead><tr><th>Year</th><th>Make</th><th>Model</th><th>Trim</th><th>Benchmark</th><th>Avg Miles</th><th>Notes</th></tr></thead>
+  <tbody>
+  {% for a in rows %}
+    <tr>
+      <td>{{ a.year }}</td><td>{{ a.make }}</td><td>{{ a.model }}</td>
+      <td>{{ a.trim or '' }}</td><td>${{ "{:,}".format(a.benchmark_price) }}</td>
+      <td>{{ a.avg_mileage or '' }}</td><td>{{ a.notes or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<a class="btn" href="/admin/appraisals/export_csv">Export CSV</a>
+{% endblock %}

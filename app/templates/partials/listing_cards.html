@@ -1,0 +1,369 @@
+<div class="listings-grid">
+  {% for m in rows %}
+  <div class="listing-card">
+    <!-- Image Section -->
+    <div class="listing-image">
+      {% if m.listing.raw and m.listing.raw.images and m.listing.raw.images|length > 0 %}
+        <img src="{{ m.listing.raw.images[0] }}" alt="{{ m.listing.year }} {{ m.listing.make }} {{ m.listing.model }}" onerror="this.src='/static/placeholder-car.jpg'">
+      {% else %}
+        <div class="image-placeholder">
+          <i class="car-icon">🚗</i>
+        </div>
+      {% endif %}
+      
+      <!-- Category Badge -->
+      <div class="category-badge {{ m.category.lower() }}">
+        {{ m.category }}
+      </div>
+      
+      <!-- Margin Badge -->
+      <div class="margin-badge">
+        {{ "{:.1%}".format(m.margin_percent or 0) }}
+      </div>
+    </div>
+    
+    <!-- Content Section -->
+    <div class="listing-content">
+      <!-- Title -->
+      <h3 class="listing-title">
+        {{ m.listing.year }} {{ m.listing.make }} {{ m.listing.model }}
+        {% if m.listing.trim %}<span class="trim">{{ m.listing.trim }}</span>{% endif %}
+      </h3>
+      
+      <!-- Price and Mileage -->
+      <div class="listing-basics">
+        <div class="price">${{ "{:,}".format(m.listing.price) }}</div>
+        <div class="mileage">
+          {% if m.listing.mileage and m.listing.mileage != 0 %}
+            {{ "{:,}".format(m.listing.mileage|int) }} miles
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Financial Details -->
+      <div class="financial-grid">
+        <div class="financial-row">
+          <span class="label">Shipping</span>
+          <span class="value">${{ "{:,}".format(m.shipping_cost or 0) }}</span>
+        </div>
+        <div class="financial-row">
+          <span class="label">Reconditioning</span>
+          <span class="value">${{ "{:,}".format(m.recon_cost or 0) }}</span>
+        </div>
+        <div class="financial-row">
+          <span class="label">Packaging</span>
+          <span class="value">${{ "{:,}".format(m.pack_cost or 0) }}</span>
+        </div>
+        <div class="financial-row total">
+          <span class="label">Total Cost</span>
+          <span class="value">${{ "{:,}".format(m.total_cost or 0) }}</span>
+        </div>
+      </div>
+      
+      <!-- Benchmark and Adjustments -->
+      {% if m.appraisal %}
+      <div class="benchmark-section">
+        <div class="benchmark-row">
+          <span class="label">Benchmark</span>
+          <span class="value">${{ "{:,}".format(m.appraisal.benchmark_price) }}</span>
+        </div>
+        
+        {% if m.explanations and m.explanations.mileage and m.explanations.mileage.adjustment %}
+        <div class="adjustment-row">
+          <span class="label">Mileage Adj.</span>
+          {% set adj = m.explanations.mileage.adjustment %}
+          <span class="value adjustment {{ 'positive' if adj > 0 else 'negative' if adj < 0 else 'neutral' }}">
+            {% if adj < 0 %}
+              {{ "${:,}".format(adj) }}
+            {% elif adj > 0 %}
+              +{{ "${:,}".format(adj) }}
+            {% else %}
+              $0
+            {% endif %}
+          </span>
+        </div>
+        {% endif %}
+        
+        {% if m.explanations and m.explanations.totals and m.explanations.totals.adjusted_benchmark %}
+        <div class="benchmark-row adjusted">
+          <span class="label">Adj. Benchmark</span>
+          <span class="value">${{ "{:,}".format(m.explanations.totals.adjusted_benchmark|int) }}</span>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+      
+      <!-- Profit Margin -->
+      <div class="profit-section">
+        <div class="profit-amount">${{ "{:,}".format(m.gross_margin_dollars or 0) }}</div>
+        <div class="profit-label">Projected Profit</div>
+      </div>
+      
+      <!-- Action Button -->
+      <div class="listing-actions">
+        <a href="{{ m.listing.url }}" target="_blank" class="view-listing-btn">
+          View Listing →
+        </a>
+        {% if m.scored_at %}
+        <div class="scored-date">Updated {{ m.scored_at.strftime('%m/%d') }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<style>
+.listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 20px;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+.listing-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #e5e7eb;
+}
+
+.listing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.listing-image {
+  position: relative;
+  height: 160px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.listing-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.listing-card:hover .listing-image img {
+  transform: scale(1.05);
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+  color: #6b7280;
+}
+
+.car-icon {
+  font-size: 48px;
+}
+
+.category-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.category-badge.profitable {
+  background: #059669;
+  color: white;
+}
+
+.category-badge.maybe {
+  background: #d97706;
+  color: white;
+}
+
+.category-badge.unknown {
+  background: #6b7280;
+  color: white;
+}
+
+.margin-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.listing-content {
+  padding: 16px;
+}
+
+.listing-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 10px 0;
+  line-height: 1.3;
+}
+
+.listing-title .trim {
+  color: #6b7280;
+  font-weight: 400;
+  font-size: 16px;
+}
+
+.listing-basics {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.price {
+  font-size: 24px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.mileage {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.financial-grid {
+  margin-bottom: 16px;
+}
+
+.financial-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.financial-row.total {
+  border-top: 2px solid #e5e7eb;
+  border-bottom: none;
+  font-weight: 600;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.financial-row .label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.financial-row .value {
+  font-weight: 500;
+  color: #111827;
+  font-size: 14px;
+}
+
+.benchmark-section {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.benchmark-row, .adjustment-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.benchmark-row.adjusted {
+  font-weight: 600;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+.adjustment-row .value.adjustment.positive {
+  color: #059669;
+}
+
+.adjustment-row .value.adjustment.negative {
+  color: #dc2626;
+}
+
+.adjustment-row .value.adjustment.neutral {
+  color: #6b7280;
+}
+
+.profit-section {
+  text-align: center;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.profit-amount {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0369a1;
+  margin-bottom: 4px;
+}
+
+.profit-label {
+  color: #0284c7;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.listing-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.view-listing-btn {
+  background: #2563eb;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.view-listing-btn:hover {
+  background: #1d4ed8;
+}
+
+.scored-date {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .listings-grid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .listing-card {
+    margin: 0;
+  }
+}
+</style>

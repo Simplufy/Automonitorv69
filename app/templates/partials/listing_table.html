@@ -1,0 +1,67 @@
+<table style="font-size: 0.75em; width: 100%;">
+  <thead>
+    <tr>
+      <th style="font-size: 0.7em; padding: 4px;">Date</th>
+      <th style="font-size: 0.7em; padding: 4px;">Year</th>
+      <th style="font-size: 0.7em; padding: 4px;">Make</th>
+      <th style="font-size: 0.7em; padding: 4px;">Model</th>
+      <th style="font-size: 0.7em; padding: 4px;">Trim</th>
+      <th style="font-size: 0.7em; padding: 4px;">Miles</th>
+      <th style="font-size: 0.7em; padding: 4px;">BenchMi</th>
+      <th style="font-size: 0.7em; padding: 4px;">MiAdj</th>
+      <th style="font-size: 0.7em; padding: 4px;">Price</th>
+      <th style="font-size: 0.7em; padding: 4px;">Ship</th>
+      <th style="font-size: 0.7em; padding: 4px;">Recon</th>
+      <th style="font-size: 0.7em; padding: 4px;">Pack</th>
+      <th style="font-size: 0.7em; padding: 4px;">Total</th>
+      <th style="font-size: 0.7em; padding: 4px;">Bench</th>
+      <th style="font-size: 0.7em; padding: 4px;">AdjBench</th>
+      <th style="font-size: 0.7em; padding: 4px;">$Mar</th>
+      <th style="font-size: 0.7em; padding: 4px;">%Mar</th>
+      <th style="font-size: 0.7em; padding: 4px;">Conf</th>
+      <th style="font-size: 0.7em; padding: 4px;">Cat</th>
+      <th style="font-size: 0.7em; padding: 4px;">Link</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in rows %}
+    <tr style="font-size: 0.8em;">
+      <td style="padding: 2px; font-size: 0.7em;">{{ m.scored_at.strftime('%m/%d') if m.scored_at else '' }}</td>
+      <td style="padding: 2px;">{{ m.listing.year }}</td>
+      <td style="padding: 2px;">{{ m.listing.make }}</td>
+      <td style="padding: 2px;">{{ m.listing.model }}</td>
+      <td style="padding: 2px;">{{ m.listing.trim or '' }}</td>
+      <td style="padding: 2px;">{% if m.listing.mileage and m.listing.mileage != 0 %}{{ "{:,}".format(m.listing.mileage|int) }}{% endif %}</td>
+      <td style="padding: 2px;">{% if m.appraisal and m.appraisal.avg_mileage %}{{ "{:,}".format(m.appraisal.avg_mileage|int) }}{% endif %}</td>
+      <td style="padding: 2px;">
+        {% if m.explanations and m.explanations.mileage and m.explanations.mileage.adjustment %}
+          {% set adj = m.explanations.mileage.adjustment %}
+          {% if adj < 0 %}
+            <span style="color: red;">{{ "${:,}".format(adj) }}</span>
+          {% elif adj > 0 %}
+            <span style="color: green;">+{{ "${:,}".format(adj) }}</span>
+          {% else %}
+            $0
+          {% endif %}
+        {% endif %}
+      </td>
+      <td style="padding: 2px;">${{ "{:,}".format(m.listing.price) }}</td>
+      <td style="padding: 2px;">${{ "{:,}".format(m.shipping_cost or 0) }}</td>
+      <td style="padding: 2px;">${{ "{:,}".format(m.recon_cost or 0) }}</td>
+      <td style="padding: 2px;">${{ "{:,}".format(m.pack_cost or 0) }}</td>
+      <td style="padding: 2px;">${{ "{:,}".format(m.total_cost or 0) }}</td>
+      <td style="padding: 2px;">${{ "{:,}".format(m.appraisal.benchmark_price) if m.appraisal else '' }}</td>
+      <td style="padding: 2px;">
+        {% if m.explanations and m.explanations.totals and m.explanations.totals.adjusted_benchmark %}
+          ${{ "{:,}".format(m.explanations.totals.adjusted_benchmark|int) }}
+        {% endif %}
+      </td>
+      <td style="padding: 2px;">${{ "{:,}".format(m.gross_margin_dollars or 0) }}</td>
+      <td style="padding: 2px;">{{ "{:.1%}".format(m.margin_percent or 0) }}</td>
+      <td style="padding: 2px;">{{ m.match_confidence }}</td>
+      <td style="padding: 2px;"><span class="badge {{ m.category }}" style="font-size: 0.7em;">{{ m.category }}</span></td>
+      <td style="padding: 2px;"><a href="{{ m.listing.url }}" target="_blank" style="font-size: 0.7em;">Open</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

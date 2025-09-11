@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-header">
+  <h2>Car Deals Dashboard</h2>
+  <p>Discover profitable automotive opportunities with accurate shipping and mileage analysis</p>
+</div>
+
+<div class="filters-section">
+  <div class="category-filters">
+    <button class="filter-btn active" hx-get="/listings?category=PROFITABLE" hx-target="#results" onclick="setActiveFilter(this)" data-category="PROFITABLE">
+      💰 Profitable Deals
+    </button>
+    <button class="filter-btn" hx-get="/listings?category=MAYBE" hx-target="#results" onclick="setActiveFilter(this)" data-category="MAYBE">
+      🤔 Maybe Worth It
+    </button>
+    <button class="filter-btn" hx-get="/listings?category=UNKNOWN" hx-target="#results" onclick="setActiveFilter(this)" data-category="UNKNOWN">
+      ❓ Unknown Potential
+    </button>
+  </div>
+  
+  <div class="search-filters">
+    <div class="search-row">
+      <input type="text" id="search-input" placeholder="Search by make/model (e.g., 'Audi Q5', 'BMW M3')" class="search-input">
+      <div class="price-inputs">
+        <input type="number" id="min-price" placeholder="Min $" class="price-input">
+        <input type="number" id="max-price" placeholder="Max $" class="price-input">
+      </div>
+      <button onclick="applyFilters()" class="apply-btn">🔍 Search</button>
+      <button onclick="clearFilters()" class="clear-btn">✖️ Clear</button>
+    </div>
+  </div>
+</div>
+
+<div id="results" hx-get="/listings?category=PROFITABLE" hx-trigger="load">
+  <div class="loading-state">
+    <div class="loading-spinner"></div>
+    <p>Loading deals...</p>
+  </div>
+</div>
+
+<style>
+.dashboard-header {
+  text-align: center;
+  margin: 30px 0 40px 0;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dashboard-header h2 {
+  font-size: 32px;
+  color: #111827;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.dashboard-header p {
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.filters-section {
+  max-width: 1200px;
+  margin: 0 auto 40px auto;
+  padding: 0 20px;
+}
+
+.category-filters {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.search-filters {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.search-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 250px;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.price-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.price-input {
+  width: 100px;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.price-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.apply-btn, .clear-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apply-btn {
+  background: #2563eb;
+  color: white;
+}
+
+.apply-btn:hover {
+  background: #1d4ed8;
+}
+
+.clear-btn {
+  background: #6b7280;
+  color: white;
+}
+
+.clear-btn:hover {
+  background: #4b5563;
+}
+
+.filter-btn {
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #374151;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  min-width: 180px;
+}
+
+.filter-btn:hover {
+  border-color: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.filter-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .category-filters {
+    flex-direction: column;
+  }
+  
+  .filter-btn {
+    min-width: unset;
+  }
+  
+  .dashboard-header {
+    padding: 0 20px;
+  }
+  
+  .search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-input {
+    min-width: unset;
+  }
+  
+  .price-inputs {
+    justify-content: space-between;
+  }
+  
+  .price-input {
+    flex: 1;
+  }
+}
+</style>
+
+<script>
+function setActiveFilter(button) {
+  // Remove active class from all buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Add active class to clicked button
+  button.classList.add('active');
+  
+  // Clear search filters when switching categories
+  clearSearchInputs();
+}
+
+function applyFilters() {
+  const category = document.querySelector('.filter-btn.active').dataset.category;
+  const search = document.getElementById('search-input').value;
+  const minPrice = document.getElementById('min-price').value;
+  const maxPrice = document.getElementById('max-price').value;
+  
+  let url = `/listings?category=${category}`;
+  
+  if (search) {
+    url += `&search=${encodeURIComponent(search)}`;
+  }
+  
+  if (minPrice) {
+    url += `&min_price=${minPrice}`;
+  }
+  
+  if (maxPrice) {
+    url += `&max_price=${maxPrice}`;
+  }
+  
+  // Use HTMX to load filtered results
+  htmx.ajax('GET', url, {target: '#results'});
+}
+
+function clearFilters() {
+  clearSearchInputs();
+  // Reload current category without filters
+  const category = document.querySelector('.filter-btn.active').dataset.category;
+  htmx.ajax('GET', `/listings?category=${category}`, {target: '#results'});
+}
+
+function clearSearchInputs() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('min-price').value = '';
+  document.getElementById('max-price').value = '';
+}
+
+// Allow Enter key to trigger search
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('search-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      applyFilters();
+    }
+  });
+  
+  document.getElementById('min-price').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      applyFilters();
+    }
+  });
+  
+  document.getElementById('max-price').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      applyFilters();
+    }
+  });
+});
+</script>
+{% endblock %}

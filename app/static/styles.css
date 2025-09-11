@@ -1,0 +1,10 @@
+body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; padding: 1rem; }
+header nav a { margin-right: 10px; }
+table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+.badge { padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+.badge.PROFITABLE { background: #e6ffed; color: #067d1f; }
+.badge.MAYBE { background: #fff7e6; color: #7d5a06; }
+.badge.SKIP { background: #ffe6e6; color: #7d0606; }
+.small { font-size: 12px; color: #666; }
+.btn { padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; background: #f7f7f7; cursor: pointer; }

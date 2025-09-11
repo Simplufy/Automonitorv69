@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Settings</h2>
+<form method="post" action="/admin/settings">
+  <div>Shipping rate ($/mile): <input name="SHIPPING_RATE_PER_MILE" value="{{ settings.SHIPPING_RATE_PER_MILE }}"></div>
+  <div>Dest Lat: <input name="DEST_LAT" value="{{ settings.DEST_LAT }}"></div>
+  <div>Dest Lon: <input name="DEST_LON" value="{{ settings.DEST_LON }}"></div>
+  <div>Profit min pct: <input name="PROFIT_MIN_PCT" value="{{ settings.PROFIT_MIN_PCT }}"></div>
+  <div>Maybe min pct: <input name="MAYBE_MIN_PCT" value="{{ settings.MAYBE_MIN_PCT }}"></div>
+  <div>PACK_TIERS (JSON):<br>
+    <textarea name="PACK_TIERS_JSON" rows="8" cols="80">{{ settings.PACK_TIERS | tojson }}</textarea>
+  </div>
+  <button class="btn" type="submit">Save</button>
+</form>
+{% endblock %}
