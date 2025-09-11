@@ -2,12 +2,12 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "sqlite:////mnt/data/app.db"
+    DATABASE_URL: str = "postgresql://localhost/autoprofit"
     ADMIN_PASSPHRASE: str = "letmein123"
 
     APIFY_TOKEN: str | None = None
     APIFY_ACTOR_ID: str | None = None
-    ENABLE_APIFY_POLLING: bool = True
+    ENABLE_APIFY_POLLING: bool = False
     APIFY_POLL_INTERVAL_MINUTES: int = 60
 
     DEST_LAT: float = 40.117802

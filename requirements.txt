@@ -31,3 +31,4 @@ python-multipart
 rapidfuzz
 sqlalchemy
 uvicorn[standard]
+psycopg2-binary

@@ -1,6 +1,6 @@
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import sqlite
+from sqlalchemy.dialects import postgresql
 
 revision = '0001_init'
 down_revision = None
@@ -37,7 +37,7 @@ def upgrade():
         sa.Column('lon', sa.Float, nullable=True),
         sa.Column('zip', sa.String(10), nullable=True),
         sa.Column('source', sa.String(100), nullable=False, server_default='apify_autotrader'),
-        sa.Column('raw', sqlite.JSON(), nullable=True),
+        sa.Column('raw', postgresql.JSON(), nullable=True),
         sa.Column('ingested_at', sa.DateTime, nullable=True)
     )
 
@@ -55,13 +55,13 @@ def upgrade():
         sa.Column('gross_margin_dollars', sa.Integer, nullable=True),
         sa.Column('margin_percent', sa.Float, nullable=True),
         sa.Column('category', sa.String(12), nullable=False, server_default='SKIP'),
-        sa.Column('explanations', sqlite.JSON(), nullable=True),
+        sa.Column('explanations', postgresql.JSON(), nullable=True),
         sa.Column('scored_at', sa.DateTime, nullable=True)
     )
 
     op.create_table('settings',
         sa.Column('key', sa.String(100), primary_key=True),
-        sa.Column('value', sqlite.JSON(), nullable=True)
+        sa.Column('value', postgresql.JSON(), nullable=True)
     )
 
 def downgrade():
