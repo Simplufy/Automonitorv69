@@ -5,23 +5,23 @@ from app.models import Appraisal, Listing
 from app.services.utils import normalize_ymmt
 
 def normalize_trim_for_matching(make: str, model: str, trim: str) -> str:
-    """Normalize trim names to match appraisal database conventions"""
+    """Legacy function - replaced by TrimMapper service"""
+    # Import here to avoid circular imports
+    from app.services.trim_mapper import trim_mapper
+    from app.db import SessionLocal
+    
     if not trim or not make or not model:
         return trim
     
-    make_lower = make.lower()
-    model_lower = model.lower()
-    trim_lower = trim.lower()
-    
-    # BMW M variant mappings
-    if make_lower == 'bmw' and model_lower == 'x5':
-        if trim_lower in ['m50i', 'm50d']:
-            return 'M Base'
-        elif trim_lower in ['m', 'competition', 'm competition']:
-            return 'M Competition'
-    
-    # Add more brand-specific mappings as needed
-    return trim
+    # Use TrimMapper for intelligent mapping
+    db = SessionLocal()
+    try:
+        # For now, extract year from context (this is a transitional function)
+        # In practice, we'll call TrimMapper directly from the main matching logic
+        result = trim_mapper.map_trim_to_canonical(db, make, model, 2021, trim)  # Default year
+        return result.canonical_trim if result.canonical_trim else trim
+    finally:
+        db.close()
 
 def find_best_appraisal_for_listing(db: Session, listing: Listing) -> tuple[Optional[Appraisal], str, int]:
     # Skip matching if essential fields are missing
