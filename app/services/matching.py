@@ -30,7 +30,7 @@ def find_best_appraisal_for_listing(db: Session, listing: Listing) -> tuple[Opti
         
     ymmt, ymm = normalize_ymmt(listing.year, listing.make, listing.model, listing.trim)
 
-    # Exact YMMT with trim normalization
+    # Exact YMMT with intelligent trim mapping
     q = db.query(Appraisal).filter(Appraisal.year==listing.year,
                                    Appraisal.make.ilike(listing.make),
                                    Appraisal.model.ilike(listing.model))
@@ -41,13 +41,17 @@ def find_best_appraisal_for_listing(db: Session, listing: Listing) -> tuple[Opti
         if exact_ymmt:
             return exact_ymmt[0], "YMMT", 100
             
-        # Then try normalized trim match
-        normalized_trim = normalize_trim_for_matching(listing.make, listing.model, listing.trim)
-        if normalized_trim != listing.trim:
-            q3 = q.filter(Appraisal.trim.ilike(normalized_trim))
-            normalized_ymmt = q3.all()
-            if normalized_ymmt:
-                return normalized_ymmt[0], "YMMT", 100
+        # Then use TrimMapper for intelligent mapping
+        from app.services.trim_mapper import trim_mapper
+        trim_result = trim_mapper.map_trim_to_canonical(db, listing.make, listing.model, listing.year, listing.trim)
+        
+        if trim_result.canonical_trim and trim_result.confidence >= 85:
+            q3 = q.filter(Appraisal.trim.ilike(trim_result.canonical_trim))
+            mapped_ymmt = q3.all()
+            if mapped_ymmt:
+                # Use the confidence from TrimMapper as match confidence
+                confidence = min(trim_result.confidence, 100)
+                return mapped_ymmt[0], "YMMT", confidence
 
     # Exact YMM (trim NULL)
     exact_ymm = db.query(Appraisal).filter(Appraisal.year==listing.year,
