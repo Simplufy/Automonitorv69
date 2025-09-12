@@ -115,13 +115,20 @@ class TrimMapper:
         if exact_alias:
             return db.query(CanonicalTrim).get(exact_alias.canonical_id)
             
-        # Try contains matches
-        contains_alias = db.query(TrimAlias).filter(
+        # Try contains matches - check if listing_trim contains the alias
+        normalized_listing = self.normalize_trim_text(listing_trim)
+        contains_aliases = db.query(TrimAlias).filter(
             TrimAlias.canonical_id.in_(candidate_ids),
-            TrimAlias.alias.ilike(f"%{listing_trim}%"),
             TrimAlias.pattern_type == PatternType.CONTAINS,
             TrimAlias.active == True
-        ).order_by(TrimAlias.priority).first()
+        ).order_by(TrimAlias.priority).all()
+        
+        contains_alias = None
+        for alias in contains_aliases:
+            normalized_alias = self.normalize_trim_text(alias.alias)
+            if normalized_alias in normalized_listing:
+                contains_alias = alias
+                break
         
         if contains_alias:
             return db.query(CanonicalTrim).get(contains_alias.canonical_id)
