@@ -47,7 +47,7 @@ async def fetch_latest_dataset_items(
             ds_params = {"token": settings.APIFY_TOKEN}
             # Remove any default limits to get ALL items from each run
             if items_per_run_limit:
-                ds_params["limit"] = items_per_run_limit
+                ds_params["limit"] = str(items_per_run_limit)
                 print(f"  Fetching max {items_per_run_limit} items from dataset {dataset_id}")
             else:
                 print(f"  Fetching ALL items from dataset {dataset_id}")
@@ -60,6 +60,51 @@ async def fetch_latest_dataset_items(
 
     print(f"Total items collected: {len(items)}")
     return items
+
+def extract_trim_from_title(title: str, year: int, make: str, model: str) -> str | None:
+    """Extract trim information from the listing title"""
+    if not title or not year or not make or not model:
+        return None
+    
+    # Remove common prefixes
+    title = title.replace("Used ", "").replace("Certified ", "").replace("New ", "")
+    title = title.replace("Pre-Owned ", "").replace("Certified Pre-Owned ", "")
+    
+    # Create expected base pattern: "YEAR MAKE MODEL"
+    base_pattern = f"{year} {make} {model}"
+    
+    # Find where the base pattern ends
+    base_idx = title.find(base_pattern)
+    if base_idx == -1:
+        # Try without year
+        base_pattern = f"{make} {model}"
+        base_idx = title.find(base_pattern)
+        
+    if base_idx != -1:
+        # Extract everything after the base pattern
+        remainder = title[base_idx + len(base_pattern):].strip()
+        
+        # Remove common suffixes that aren't trim
+        remainder = remainder.replace(" w/", " with")
+        
+        # Split and clean up
+        parts = [p.strip() for p in remainder.split(" with ") if p.strip()]
+        if parts:
+            # Join parts that look like trim levels
+            trim_parts = []
+            for part in parts[0].split():
+                # Stop at common non-trim words
+                if part.lower() in ["package", "packages", "pkg"]:
+                    break
+                trim_parts.append(part)
+            
+            if trim_parts:
+                trim = " ".join(trim_parts)
+                # Clean up common patterns
+                trim = trim.strip("()").strip()
+                return trim if len(trim) > 1 else None
+    
+    return None
 
 def normalize_autotrader_item(item: Dict[str, Any]) -> Dict[str, Any]:
     """Map raw Apify data into our Listing model fields"""
@@ -84,12 +129,36 @@ def normalize_autotrader_item(item: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             mileage = None
 
+    # Extract basic info
+    year = g("year")
+    make = g("make", "brand")
+    model = g("model")
+    
+    # Try to get trim from multiple sources
+    trim = g("trim")  # Direct trim field first
+    
+    if not trim:
+        # Try extracting from title
+        title = g("title")
+        if title and year and make and model:
+            trim = extract_trim_from_title(title, year, make, model)
+    
+    if not trim:
+        # Try extracting from specifications or other fields
+        specs = g("specifications", {})
+        if isinstance(specs, dict):
+            # Look for trim-like information in specifications
+            for key in ["trim", "package", "level", "edition"]:
+                if key in specs and specs[key]:
+                    trim = specs[key]
+                    break
+
     return {
         "vin": g("vin", "VIN"),
-        "year": g("year"),
-        "make": g("make", "brand"),  # Map brand to make
-        "model": g("model"),
-        "trim": g("trim"),
+        "year": year,
+        "make": make,
+        "model": model,
+        "trim": trim,
         "price": price,
         "mileage": mileage,
         "url": g("url", "detailUrl", "listingUrl"),
