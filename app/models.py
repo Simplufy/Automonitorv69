@@ -1,8 +1,14 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Boolean, Enum
 from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db import Base
+import enum
+
+class PatternType(enum.Enum):
+    EXACT = "exact"
+    CONTAINS = "contains"
+    REGEX = "regex"
 
 class Appraisal(Base):
     __tablename__ = "appraisals"
@@ -57,3 +63,32 @@ class MatchResult(Base):
 
     listing = relationship("Listing")
     appraisal = relationship("Appraisal")
+
+class CanonicalTrim(Base):
+    __tablename__ = "canonical_trims"
+    id = Column(Integer, primary_key=True)
+    make = Column(String(100), nullable=False, index=True)
+    model = Column(String(100), nullable=False, index=True)
+    year_start = Column(Integer, nullable=False, index=True)
+    year_end = Column(Integer, nullable=False, index=True)
+    canonical_trim = Column(String(100), nullable=False)
+    attributes = Column(JSON, nullable=True)  # Store additional trim metadata
+    active = Column(Boolean, default=True, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    aliases = relationship("TrimAlias", back_populates="canonical")
+
+class TrimAlias(Base):
+    __tablename__ = "trim_aliases"
+    id = Column(Integer, primary_key=True)
+    canonical_id = Column(Integer, ForeignKey("canonical_trims.id", ondelete="CASCADE"), nullable=False)
+    alias = Column(String(100), nullable=False, index=True)
+    pattern_type = Column(Enum(PatternType), default=PatternType.EXACT, nullable=False)
+    priority = Column(Integer, default=100, nullable=False)  # Lower = higher priority
+    normalize_flags = Column(JSON, nullable=True)  # Store normalization options
+    active = Column(Boolean, default=True, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    canonical = relationship("CanonicalTrim", back_populates="aliases")
