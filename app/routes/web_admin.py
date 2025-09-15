@@ -8,7 +8,7 @@ from datetime import datetime
 from app.db import SessionLocal
 from app.models import Appraisal, Listing, MatchResult
 from app.config import settings
-from app.services.apify_client import fetch_latest_dataset_items, normalize_autotrader_item
+from app.services.apify_client import fetch_latest_dataset_items, normalize_autotrader_item, fetch_and_store_multi_source
 from app.services.matching import find_best_appraisal_for_listing
 from app.services.scoring import score_listing_async
 
@@ -142,51 +142,9 @@ async def fetch_apify_now(request: Request):
         return RedirectResponse(url="/admin", status_code=303)
     db: Session = SessionLocal()
     try:
-        items = await fetch_latest_dataset_items(settings.APIFY_ACTOR_ID or "", runs_to_scan=2)
-        for raw in items:
-            norm = normalize_autotrader_item(raw)
-            vin = norm.get("vin")
-            price = norm.get("price")
-            if not vin or not price:
-                continue
-            listing = db.query(Listing).filter(Listing.vin==vin).first()
-            if listing is None:
-                listing = Listing(**norm)
-                db.add(listing)
-            else:
-                for k, v in norm.items():
-                    setattr(listing, k, v)
-                listing.ingested_at = datetime.utcnow()
-            db.commit()
-            db.refresh(listing)
-
-            appraisal, level, conf = find_best_appraisal_for_listing(db, listing)
-            res = await score_listing_async(listing, appraisal)
-            match = db.query(MatchResult).filter(MatchResult.listing_id==listing.id).first()
-            if match is None:
-                match = MatchResult(listing_id=listing.id, appraisal_id=appraisal.id if appraisal else None,
-                                    match_level=level, match_confidence=conf,
-                                    shipping_miles=res.get("shipping_miles"),
-                                    shipping_cost=res.get("shipping_cost"),
-                                    recon_cost=res.get("recon_cost"),
-                                    pack_cost=res.get("pack_cost"),
-                                    total_cost=res.get("total_cost"),
-                                    gross_margin_dollars=res.get("gross_margin_dollars"),
-                                    margin_percent=res.get("margin_percent"),
-                                    category=res.get("category"),
-                                    explanations=res.get("explanations"))
-                db.add(match)
-            else:
-                match.appraisal_id = appraisal.id if appraisal else None
-                match.match_level = level
-                match.match_confidence = conf
-                for k, v in res.items():
-                    if k == "explanations":
-                        match.explanations = v
-                    elif hasattr(match, k):
-                        setattr(match, k, v)
-                match.scored_at = datetime.utcnow()
-            db.commit()
+        # Use multi-source fetch for both Autotrader and Cars.com
+        inserted, skipped = await fetch_and_store_multi_source(db, runs_to_scan=2, items_per_run_limit=None)
+        print(f"Admin fetch complete: {inserted} new listings, {skipped} skipped")
         return RedirectResponse(url="/admin", status_code=303)
     finally:
         db.close()
