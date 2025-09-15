@@ -8,7 +8,7 @@ from datetime import datetime
 from app.db import SessionLocal
 from app.models import Appraisal, Listing, MatchResult
 from app.config import settings
-from app.services.apify_client import fetch_latest_dataset_items, normalize_autotrader_item, fetch_and_store_multi_source
+from app.services.apify_client import fetch_and_store_multi_source
 from app.services.matching import find_best_appraisal_for_listing
 from app.services.scoring import score_listing_async
 
@@ -142,7 +142,7 @@ async def fetch_apify_now(request: Request):
         return RedirectResponse(url="/admin", status_code=303)
     db: Session = SessionLocal()
     try:
-        # Use multi-source fetch for both Autotrader and Cars.com
+        # Use Cars.com fetch for new listings
         inserted, skipped = await fetch_and_store_multi_source(db, runs_to_scan=2, items_per_run_limit=None)
         print(f"Admin fetch complete: {inserted} new listings, {skipped} skipped")
         return RedirectResponse(url="/admin", status_code=303)
@@ -168,18 +168,18 @@ def test_apify_connection(request: Request):
         return "Not authenticated"
     
     token = settings.APIFY_TOKEN
-    actor_id = settings.APIFY_ACTOR_ID
+    actor_id = settings.APIFY_CARSCOM_ACTOR_ID
     
     result = []
     result.append(f"APIFY_TOKEN: {'SET' if token else 'NOT SET'}")
-    result.append(f"APIFY_ACTOR_ID: {actor_id}")
+    result.append(f"APIFY_CARSCOM_ACTOR_ID: {actor_id}")
     
     if not token:
         result.append("\nERROR: APIFY_TOKEN is not set in secrets")
         return "\n".join(result)
     
     if not actor_id:
-        result.append("\nERROR: APIFY_ACTOR_ID is not set in secrets")
+        result.append("\nERROR: APIFY_CARSCOM_ACTOR_ID is not set in secrets")
         return "\n".join(result)
     
     # Test basic API access

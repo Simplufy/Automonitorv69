@@ -1,7 +1,7 @@
 # AutoProfit
 
 ## Overview
-AutoProfit is a FastAPI-based automotive arbitrage analysis platform that automates the process of finding profitable car deals. The system ingests vehicle listings from Autotrader via Apify scraping, matches them against an appraisal database, and calculates profit margins after accounting for shipping, reconditioning, and packaging costs. The application categorizes deals as PROFITABLE (≥7% margin), MAYBE (6-7% margin), or UNKNOWN (<6% margin) to help dealers identify the most lucrative opportunities.
+AutoProfit is a FastAPI-based automotive arbitrage analysis platform that automates the process of finding profitable car deals. The system ingests vehicle listings from Cars.com via Apify scraping, matches them against an appraisal database, and calculates profit margins after accounting for shipping, reconditioning, and packaging costs. The application categorizes deals as PROFITABLE (≥7% margin), MAYBE (6-7% margin), or UNKNOWN (<6% margin) to help dealers identify the most lucrative opportunities.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -25,7 +25,7 @@ Preferred communication style: Simple, everyday language.
 - **Geocoding Service**: Converts zip codes to coordinates using Zippopotam.us API for accurate shipping distance calculations
 
 ### Data Processing Pipeline
-- **Ingestion**: Apify actor scrapes Autotrader listings and normalizes data structure
+- **Ingestion**: Apify actor scrapes Cars.com listings and normalizes data structure
 - **Deduplication**: VIN-based deduplication prevents duplicate processing
 - **Enrichment**: Geographic coordinates resolution and cost calculations
 - **Categorization**: Automated profit margin categorization based on configurable thresholds
@@ -46,7 +46,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Configuration Management
 - **Environment Variables**: Pydantic Settings for type-safe configuration with .env file support
-- **Required Secrets**: APIFY_TOKEN, APIFY_ACTOR_ID, ADMIN_PASSPHRASE for Replit Secrets integration
+- **Required Secrets**: APIFY_TOKEN, APIFY_CARSCOM_ACTOR_ID, ADMIN_PASSPHRASE for Replit Secrets integration
 - **Business Rules**: Configurable cost tiers, profit thresholds, and geographic parameters
 
 ### Database Schema
