@@ -1,5 +1,6 @@
 import json
 import os
+import math
 from typing import Optional, Dict, Any, List, Tuple
 from rapidfuzz import fuzz, process
 from app.models import Listing, Appraisal
@@ -103,6 +104,18 @@ class DepreciationService:
         self.lookup_cache[cache_key] = None
         return None
     
+    def _safe_float_to_int(self, value) -> int:
+        """
+        Safely convert a value to integer, handling NaN, None, and invalid values.
+        Returns 0 for any invalid input.
+        """
+        try:
+            if value is None or (isinstance(value, float) and math.isnan(value)):
+                return 0
+            return int(float(value))
+        except (ValueError, TypeError, OverflowError):
+            return 0
+    
     def calculate_specific_depreciation(self, listing: Listing, appraisal: Optional[Appraisal]) -> Tuple[int, bool]:
         """
         Calculate depreciation using specific trim data if available.
@@ -116,23 +129,49 @@ class DepreciationService:
             return 0, False
         
         total_adjustment = 0
+        applied_any_adjustment = False
         
         # Mileage adjustment
         if listing.mileage and appraisal.avg_mileage:
-            mileage_diff = listing.mileage - appraisal.avg_mileage
-            mileage_deduction_per_10k = depreciation_entry.get("Mileage_Deduction_per_10k", 0)
-            # Convert to per-mile adjustment then multiply by difference
-            mileage_adjustment = (mileage_diff / 10000) * mileage_deduction_per_10k
-            total_adjustment += int(mileage_adjustment)
+            try:
+                mileage_diff = listing.mileage - appraisal.avg_mileage
+                mileage_deduction_per_10k = depreciation_entry.get("Mileage_Deduction_per_10k", 0)
+                
+                # Validate the deduction rate
+                if mileage_deduction_per_10k is None or (isinstance(mileage_deduction_per_10k, float) and math.isnan(mileage_deduction_per_10k)):
+                    mileage_deduction_per_10k = 0
+                else:
+                    # Convert to per-mile adjustment then multiply by difference
+                    mileage_adjustment = (mileage_diff / 10000) * float(mileage_deduction_per_10k)
+                    adjustment = self._safe_float_to_int(mileage_adjustment)
+                    if adjustment != 0:  # Only count non-zero adjustments as "applied"
+                        total_adjustment += adjustment
+                        applied_any_adjustment = True
+            except (ValueError, TypeError, ZeroDivisionError):
+                # Skip mileage adjustment if data is invalid
+                pass
         
         # Age adjustment (if appraisal has base year)
         if hasattr(appraisal, 'year') and appraisal.year and listing.year:
-            age_diff = appraisal.year - listing.year  # Positive if listing is older
-            age_deduction_per_year = depreciation_entry.get("Age_Deduction_per_year", 0)
-            age_adjustment = age_diff * age_deduction_per_year
-            total_adjustment += int(age_adjustment)
+            try:
+                age_diff = appraisal.year - listing.year  # Positive if listing is older
+                age_deduction_per_year = depreciation_entry.get("Age_Deduction_per_year", 0)
+                
+                # Validate the deduction rate
+                if age_deduction_per_year is None or (isinstance(age_deduction_per_year, float) and math.isnan(age_deduction_per_year)):
+                    age_deduction_per_year = 0
+                else:
+                    age_adjustment = age_diff * float(age_deduction_per_year)
+                    adjustment = self._safe_float_to_int(age_adjustment)
+                    if adjustment != 0:  # Only count non-zero adjustments as "applied"
+                        total_adjustment += adjustment
+                        applied_any_adjustment = True
+            except (ValueError, TypeError):
+                # Skip age adjustment if data is invalid
+                pass
         
-        return total_adjustment, True
+        # Return True only if we actually applied at least one valid specific adjustment
+        return total_adjustment, applied_any_adjustment
     
     def get_depreciation_stats(self) -> Dict[str, Any]:
         """Get statistics about loaded depreciation data"""
