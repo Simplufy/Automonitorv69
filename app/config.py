@@ -6,7 +6,11 @@ class Settings(BaseSettings):
     ADMIN_PASSPHRASE: str = "CHANGE_ME_IMMEDIATELY"
 
     APIFY_TOKEN: str | None = None
+    # Legacy single actor ID (for backward compatibility)
     APIFY_ACTOR_ID: str | None = None
+    # Multi-source actor IDs
+    APIFY_AUTOTRADER_ACTOR_ID: str | None = None
+    APIFY_CARSCOM_ACTOR_ID: str | None = None
     ENABLE_APIFY_POLLING: bool = False
     APIFY_POLL_INTERVAL_MINUTES: int = 60
 
