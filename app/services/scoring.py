@@ -3,6 +3,7 @@ import asyncio
 from app.config import settings
 from app.models import Listing, Appraisal
 from app.services.geo import haversine_miles, geocode_location, extract_area_code_from_phone, geocode_area_code
+from app.services.depreciation import depreciation_service
 
 def pack_cost(price: int) -> int:
     for tier in settings.PACK_TIERS:
@@ -31,39 +32,74 @@ def categorize_vehicle(listing: Listing) -> str:
     # Default to sedan for everything else
     return 'sedan'
 
-def calculate_mileage_adjustment(listing: Listing, appraisal: Appraisal) -> int:
+def calculate_mileage_adjustment(listing: Listing, appraisal: Appraisal) -> tuple[int, bool, dict]:
     """
-    Calculate mileage-based price adjustment based on vehicle category and mileage differential.
-    Returns adjustment amount (negative = penalty, positive = bonus)
+    Calculate mileage-based price adjustment using specific trim data when available,
+    falling back to generic vehicle category logic.
+    Returns (adjustment_amount, used_specific_data, method_info)
     """
     if not listing.mileage or not appraisal.avg_mileage:
-        return 0
+        return 0, False, {"reason": "missing_mileage_data"}
     
+    # First try specific depreciation data
+    specific_adjustment, used_specific = depreciation_service.calculate_specific_depreciation(listing, appraisal)
+    if used_specific:
+        depreciation_entry = depreciation_service.find_depreciation_rate(listing)
+        return specific_adjustment, True, {
+            "method": "specific_trim_data",
+            "trim_match": depreciation_entry.get("Make_Model_Trim", "Unknown"),
+            "sample_size": depreciation_entry.get("Sample_Size", 0),
+            "r2_score": depreciation_entry.get("R2", 0),
+            "mileage_deduction_per_10k": depreciation_entry.get("Mileage_Deduction_per_10k", 0),
+            "age_deduction_per_year": depreciation_entry.get("Age_Deduction_per_year", 0)
+        }
+    
+    # Fall back to generic vehicle category logic
     mileage_diff = listing.mileage - appraisal.avg_mileage
     vehicle_category = categorize_vehicle(listing)
     
     # Supercars/Extreme Lux (over $70k): ±$3,000 per 5,000 miles
     if vehicle_category == 'supercar':
         increments = mileage_diff / 5000
-        return int(-increments * settings.MILEAGE_SUPERCAR_ADJUSTMENT_PER_5K)
+        adjustment = int(-increments * settings.MILEAGE_SUPERCAR_ADJUSTMENT_PER_5K)
+        return adjustment, False, {
+            "method": "generic_supercar",
+            "category": vehicle_category,
+            "rate_per_5k": settings.MILEAGE_SUPERCAR_ADJUSTMENT_PER_5K
+        }
     
     # High-mileage coupes/convertibles (over 45k miles): -$2,000 per 5,000 miles over benchmark
     if vehicle_category == 'coupe_convertible' and listing.mileage > settings.MILEAGE_HIGH_MILE_THRESHOLD:
         if mileage_diff > 0:  # Only apply penalty, no bonus for being under
             increments = mileage_diff / 5000
-            return int(-increments * settings.MILEAGE_HIGH_MILE_ADJUSTMENT_PER_5K)
+            adjustment = int(-increments * settings.MILEAGE_HIGH_MILE_ADJUSTMENT_PER_5K)
+            return adjustment, False, {
+                "method": "generic_high_mile_coupe",
+                "category": vehicle_category,
+                "rate_per_5k": settings.MILEAGE_HIGH_MILE_ADJUSTMENT_PER_5K
+            }
     
     # SUVs: ±$1,500 per 10,000 miles
     elif vehicle_category == 'suv':
         increments = mileage_diff / 10000
-        return int(-increments * settings.MILEAGE_SUV_ADJUSTMENT_PER_10K)
+        adjustment = int(-increments * settings.MILEAGE_SUV_ADJUSTMENT_PER_10K)
+        return adjustment, False, {
+            "method": "generic_suv",
+            "category": vehicle_category,
+            "rate_per_10k": settings.MILEAGE_SUV_ADJUSTMENT_PER_10K
+        }
     
     # Normal sedans (under $70k): ±$2,000 per 10,000 miles
     else:  # sedan or fallback
         increments = mileage_diff / 10000
-        return int(-increments * settings.MILEAGE_SEDAN_ADJUSTMENT_PER_10K)
+        adjustment = int(-increments * settings.MILEAGE_SEDAN_ADJUSTMENT_PER_10K)
+        return adjustment, False, {
+            "method": "generic_sedan",
+            "category": vehicle_category,
+            "rate_per_10k": settings.MILEAGE_SEDAN_ADJUSTMENT_PER_10K
+        }
     
-    return 0
+    return 0, False, {"method": "no_adjustment"}
 
 def recon_cost(year: int, mileage: Optional[int]) -> int:
     if mileage is not None and mileage <= settings.RECON_NEW_MILES_MAX:
@@ -136,7 +172,7 @@ async def score_listing_async(listing: Listing, appraisal: Optional[Appraisal]) 
     ship_miles, ship_cost_val, ship_unknown = await shipping_cost(listing)
     recon = recon_cost(listing.year, listing.mileage)
     pack = pack_cost(listing.price)
-    mileage_adjustment = calculate_mileage_adjustment(listing, appraisal)
+    mileage_adjustment, used_specific_data, depreciation_method = calculate_mileage_adjustment(listing, appraisal)
 
     # Apply mileage adjustment to the benchmark price (not cost)
     adjusted_benchmark = appraisal.benchmark_price + mileage_adjustment
@@ -161,7 +197,9 @@ async def score_listing_async(listing: Listing, appraisal: Optional[Appraisal]) 
             "benchmark_mileage": getattr(appraisal, 'avg_mileage', None),
             "mileage_diff": listing.mileage - getattr(appraisal, 'avg_mileage', 0) if listing.mileage and getattr(appraisal, 'avg_mileage', None) else 0,
             "vehicle_category": categorize_vehicle(listing),
-            "adjustment": mileage_adjustment
+            "adjustment": mileage_adjustment,
+            "used_specific_data": used_specific_data,
+            "depreciation_method": depreciation_method
         },
         "totals": {
             "total_cost": total_cost, 

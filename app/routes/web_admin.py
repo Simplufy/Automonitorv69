@@ -9,6 +9,7 @@ from app.db import SessionLocal
 from app.models import Appraisal, Listing, MatchResult
 from app.config import settings
 from app.services.apify_client import fetch_and_store_multi_source
+from app.services.depreciation import depreciation_service
 from app.services.matching import find_best_appraisal_for_listing
 from app.services.scoring import score_listing_async
 
@@ -227,5 +228,33 @@ def test_apify_connection(request: Request):
     
     except Exception as e:
         result.append(f"\nException occurred: {str(e)}")
+    
+    return "\n".join(result)
+
+@router.get("/depreciation-stats", response_class=PlainTextResponse)
+def depreciation_stats(request: Request):
+    if not authed(request):
+        return "Not authenticated"
+    
+    stats = depreciation_service.get_depreciation_stats()
+    
+    result = []
+    result.append("=== DEPRECIATION DATA STATS ===")
+    result.append(f"Total Entries: {stats['total_entries']}")
+    result.append(f"Unique Makes: {stats['unique_makes']}")
+    result.append(f"Year Range: {stats['year_range']}")
+    result.append(f"Total Sample Size: {stats['total_sample_size']:,}")
+    result.append(f"Average Sample Size: {stats['avg_sample_size']:.1f}")
+    
+    if stats['total_entries'] > 0:
+        result.append("\n=== SAMPLE ENTRIES ===")
+        # Show first few entries as examples
+        for i, entry in enumerate(depreciation_service.depreciation_data[:5]):
+            result.append(f"{i+1}. {entry.get('Make_Model_Trim', 'Unknown')}")
+            result.append(f"   Mileage: ${entry.get('Mileage_Deduction_per_10k', 0):,.0f}/10k miles")
+            result.append(f"   Age: ${entry.get('Age_Deduction_per_year', 0):,.0f}/year")
+            result.append(f"   Sample Size: {entry.get('Sample_Size', 0)}")
+            result.append(f"   R²: {entry.get('R2', 0):.3f}")
+            result.append("")
     
     return "\n".join(result)
