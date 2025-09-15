@@ -108,6 +108,8 @@ def extract_trim_from_title(title: str, year: int, make: str, model: str) -> str
 
 def normalize_carscom_item(item: Dict[str, Any]) -> Dict[str, Any]:
     """Map raw Cars.com Apify data into our Listing model fields"""
+    import json
+    
     def g(*keys, default=None):
         for k in keys:
             if k in item and item[k] is not None:
@@ -153,6 +155,17 @@ def normalize_carscom_item(item: Dict[str, Any]) -> Dict[str, Any]:
                     trim = specs[key]
                     break
 
+    # Handle Cars.com photos - convert JSON string to array and add as 'images'
+    raw_item = item.copy()
+    photos = g("photos")
+    if photos and isinstance(photos, str):
+        try:
+            photos_list = json.loads(photos)
+            if isinstance(photos_list, list) and photos_list:
+                raw_item["images"] = photos_list
+        except (json.JSONDecodeError, TypeError):
+            pass  # Keep original photos field if parsing fails
+
     return {
         "vin": g("vin", "VIN", "vinNumber"),
         "year": year,
@@ -168,7 +181,7 @@ def normalize_carscom_item(item: Dict[str, Any]) -> Dict[str, Any]:
         "lat": g("lat", "latitude"),
         "lon": g("lon", "longitude", "lng"),
         "zip": g("zip", "postalCode", "postal_code", "zipCode"),
-        "raw": item,
+        "raw": raw_item,
     }
 
 

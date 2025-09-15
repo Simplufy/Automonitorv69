@@ -3,8 +3,21 @@
   <div class="listing-card">
     <!-- Image Section -->
     <div class="listing-image">
+      {% set image_url = '' %}
       {% if m.listing.raw and m.listing.raw.images and m.listing.raw.images|length > 0 %}
-        <img src="{{ m.listing.raw.images[0] }}" alt="{{ m.listing.year }} {{ m.listing.make }} {{ m.listing.model }}" onerror="this.src='/static/placeholder-car.jpg'">
+        {% set image_url = m.listing.raw.images[0] %}
+      {% elif m.listing.raw and m.listing.raw.photos %}
+        {% if m.listing.raw.photos is string %}
+          {# Cars.com legacy format - photos is JSON string #}
+          {% set image_url = m.listing.raw.photos.replace('[', '').replace(']', '').split(',')[0].strip('"') %}
+        {% elif m.listing.raw.photos|length > 0 %}
+          {# Cars.com photos as array #}
+          {% set image_url = m.listing.raw.photos[0] %}
+        {% endif %}
+      {% endif %}
+      
+      {% if image_url and image_url != '' %}
+        <img src="{{ image_url }}" alt="{{ m.listing.year }} {{ m.listing.make }} {{ m.listing.model }}" onerror="this.src='/static/placeholder-car.jpg'">
       {% else %}
         <div class="image-placeholder">
           <i class="car-icon">🚗</i>
