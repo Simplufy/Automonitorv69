@@ -21,14 +21,23 @@ Preferred communication style: Simple, everyday language.
 
 ### Business Logic Components
 - **Matching Service**: Fuzzy string matching using RapidFuzz to match vehicle listings to appraisal benchmarks (YMMT exact → YMM exact → fuzzy fallback)
-- **Scoring Service**: Calculates total costs including distance-based shipping (Haversine formula), mileage/year-based reconditioning, and price-tiered packaging costs
+- **Scoring Service**: Calculates total costs including distance-based shipping (Haversine formula), trim-specific depreciation adjustments, and price-tiered packaging costs
+- **Depreciation Service**: Advanced trim-level depreciation calculations using 739 statistical regression formulas with vehicle-specific mileage/age deduction rates
 - **Geocoding Service**: Converts zip codes to coordinates using Zippopotam.us API for accurate shipping distance calculations
 
 ### Data Processing Pipeline
 - **Ingestion**: Apify actor scrapes Cars.com listings and normalizes data structure
 - **Deduplication**: VIN-based deduplication prevents duplicate processing
-- **Enrichment**: Geographic coordinates resolution and cost calculations
+- **Enrichment**: Geographic coordinates resolution, trim-specific depreciation calculations, and cost calculations
 - **Categorization**: Automated profit margin categorization based on configurable thresholds
+
+### Advanced Depreciation System
+- **Trim-Level Data**: 739 statistical regression formulas providing vehicle-specific depreciation rates
+- **Intelligent Matching**: Exact YMMT matching with fuzzy trim fallback using RapidFuzz
+- **Real Market Data**: Mileage deductions (e.g., BMW 3 Series: -$1,235/10k miles, Porsche 911 GT3: -$30,918/10k miles) 
+- **Age Adjustments**: Year-based depreciation coefficients (e.g., BMW 3 Series: -$73/year)
+- **Statistical Confidence**: Sample sizes 23-107 vehicles with R² scores showing regression quality (0.205-0.72 range)
+- **Graceful Fallbacks**: Falls back to category-based logic (supercar/SUV/sedan/coupe) when specific data unavailable
 
 ## External Dependencies
 
