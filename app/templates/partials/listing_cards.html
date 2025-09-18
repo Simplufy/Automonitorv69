@@ -17,8 +17,8 @@
       {% endif %}
       
       {% if image_url and image_url != '' %}
-        {% if 'fbcdn.net' in image_url %}
-          {# Facebook images get blocked by CORS, use placeholder for now #}
+        {% if 'fbcdn.net' in image_url or 'scontent' in image_url or m.listing.source == 'facebook_marketplace' %}
+          {# Facebook images get blocked by CORS, use placeholder #}
           <div class="image-placeholder">
             🚗
           </div>
