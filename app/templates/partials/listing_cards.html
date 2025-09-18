@@ -17,7 +17,7 @@
       {% endif %}
       
       {% if image_url and image_url != '' %}
-        <img src="{{ image_url }}" alt="{{ m.listing.year }} {{ m.listing.make }} {{ m.listing.model }}" onerror="this.src='/static/placeholder-car.jpg'">
+        <img src="{{ image_url }}" alt="{{ m.listing.year }} {{ m.listing.make }} {{ m.listing.model }}" onerror="this.src='/static/placeholder-car.jpg'" loading="lazy" crossorigin="anonymous">
       {% else %}
         <div class="image-placeholder">
           🚗
