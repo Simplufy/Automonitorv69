@@ -241,6 +241,122 @@ def normalize_facebook_marketplace_item(item: dict) -> dict:
     }
 
 
+@router.get("/test/browseai")
+def test_browseai_connection():
+    """Test BrowseAI API connection and list recent tasks"""
+    import httpx
+    import os
+    
+    try:
+        api_key = os.getenv("BROWSEAI_API_KEY")
+        if not api_key:
+            return {"ok": False, "error": "missing_api_key"}
+        
+        robot_id = "b7b01349-ff3d-4853-b1e7-92e391cadc08"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        with httpx.Client() as client:
+            response = client.get(
+                f"https://api.browse.ai/v2/robots/{robot_id}/tasks",
+                headers=headers,
+                params={"pageSize": 10, "page": 1},
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                return {"ok": False, "error": f"API error: {response.status_code}", "response": response.text}
+            
+            data = response.json()
+            tasks = data.get("result", {}).get("robotTasks", {}).get("items", [])
+            
+            # Return summary of tasks
+            task_summary = []
+            for task in tasks[:5]:  # Just first 5 for testing
+                task_summary.append({
+                    "id": task.get("id"),
+                    "status": task.get("status"),
+                    "createdAt": task.get("createdAt"),
+                    "finishedAt": task.get("finishedAt")
+                })
+            
+            return {
+                "ok": True,
+                "total_tasks": len(tasks),
+                "recent_tasks": task_summary
+            }
+                
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+@router.post("/process-recent-listings")
+def process_recent_unmatched_listings():
+    """Process recent listings that don't have match results yet"""
+    from datetime import datetime, timedelta
+    
+    db: Session = SessionLocal()
+    try:
+        # Get recent listings without match results
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        
+        unmatched_listings = db.query(Listing).filter(
+            Listing.ingested_at >= twenty_four_hours_ago,
+            ~Listing.id.in_(db.query(MatchResult.listing_id).filter(MatchResult.listing_id.isnot(None)))
+        ).all()
+        
+        processed_count = 0
+        failed_count = 0
+        
+        for listing in unmatched_listings:
+            try:
+                # Find best appraisal match
+                appraisal, level, conf = find_best_appraisal_for_listing(db, listing)
+                
+                # Score the listing
+                res = score_listing(listing, appraisal)
+                
+                # Create match result
+                match = MatchResult(
+                    listing_id=listing.id, 
+                    appraisal_id=appraisal.id if appraisal else None,
+                    match_level=level, 
+                    match_confidence=conf,
+                    shipping_miles=res.get("shipping_miles"),
+                    shipping_cost=res.get("shipping_cost"),
+                    recon_cost=res.get("recon_cost"),
+                    pack_cost=res.get("pack_cost"),
+                    total_cost=res.get("total_cost"),
+                    gross_margin_dollars=res.get("gross_margin_dollars"),
+                    margin_percent=res.get("margin_percent"),
+                    category=res.get("category"),
+                    explanations=res.get("explanations")
+                )
+                db.add(match)
+                processed_count += 1
+                
+            except Exception as e:
+                print(f"Failed to process listing {listing.id}: {e}")
+                failed_count += 1
+        
+        db.commit()
+        
+        return {
+            "ok": True,
+            "message": f"Processed {processed_count} recent listings",
+            "processed_count": processed_count,
+            "failed_count": failed_count,
+            "total_unmatched": len(unmatched_listings)
+        }
+        
+    except Exception as e:
+        db.rollback()
+        return {"ok": False, "error": str(e)}
+    finally:
+        db.close()
+
 @router.get("/fetch/facebook-marketplace")  
 def fetch_facebook_marketplace_listings():
     """
@@ -259,10 +375,10 @@ def fetch_facebook_marketplace_listings():
         if not api_key:
             return {"ok": False, "error": "missing_api_key", "message": "BrowseAI API key not found"}
         
-        # Calculate timestamp for 24 hours ago
+        # Calculate timestamp for 48 hours ago to capture more tasks
         now = datetime.now()
-        twenty_four_hours_ago = now - timedelta(hours=24)
-        from_timestamp = int(twenty_four_hours_ago.timestamp() * 1000)  # Convert to milliseconds
+        forty_eight_hours_ago = now - timedelta(hours=48)
+        from_timestamp = int(forty_eight_hours_ago.timestamp() * 1000)  # Convert to milliseconds
         
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -276,8 +392,7 @@ def fetch_facebook_marketplace_listings():
                 headers=headers,
                 params={
                     "status": "successful",
-                    "fromDate": from_timestamp,
-                    "pageSize": 10,
+                    "pageSize": 50,
                     "page": 1
                 },
                 timeout=30
