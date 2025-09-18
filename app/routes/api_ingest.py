@@ -357,6 +357,87 @@ def process_recent_unmatched_listings():
     finally:
         db.close()
 
+@router.post("/rescore-recent-listings")
+def rescore_recent_listings():
+    """Rescore all listings from the last 24 hours with updated appraisal database"""
+    from datetime import datetime, timedelta
+    
+    db: Session = SessionLocal()
+    try:
+        # Get listings from last 24 hours
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        
+        recent_listings = db.query(Listing).filter(
+            Listing.ingested_at >= twenty_four_hours_ago
+        ).all()
+        
+        print(f"Found {len(recent_listings)} recent listings to rescore")
+        
+        # Delete existing match results for these listings
+        deleted_matches = db.query(MatchResult).filter(
+            MatchResult.listing_id.in_([l.id for l in recent_listings])
+        ).delete(synchronize_session=False)
+        
+        print(f"Deleted {deleted_matches} existing match results")
+        db.commit()
+        
+        processed_count = 0
+        failed_count = 0
+        
+        # Rescore each listing
+        for listing in recent_listings:
+            try:
+                # Find best appraisal match with new database
+                appraisal, level, conf = find_best_appraisal_for_listing(db, listing)
+                
+                # Score the listing
+                res = score_listing(listing, appraisal)
+                
+                # Create new match result
+                match = MatchResult(
+                    listing_id=listing.id, 
+                    appraisal_id=appraisal.id if appraisal else None,
+                    match_level=level, 
+                    match_confidence=conf,
+                    shipping_miles=res.get("shipping_miles"),
+                    shipping_cost=res.get("shipping_cost"),
+                    recon_cost=res.get("recon_cost"),
+                    pack_cost=res.get("pack_cost"),
+                    total_cost=res.get("total_cost"),
+                    gross_margin_dollars=res.get("gross_margin_dollars"),
+                    margin_percent=res.get("margin_percent"),
+                    category=res.get("category"),
+                    explanations=res.get("explanations")
+                )
+                db.add(match)
+                processed_count += 1
+                
+                # Commit in batches
+                if processed_count % 50 == 0:
+                    db.commit()
+                    print(f"Rescored {processed_count}/{len(recent_listings)} listings")
+                
+            except Exception as e:
+                print(f"Failed to rescore listing {listing.id}: {e}")
+                failed_count += 1
+        
+        db.commit()
+        
+        return {
+            "ok": True,
+            "message": f"Rescored {processed_count} recent listings",
+            "total_listings": len(recent_listings),
+            "processed_count": processed_count,
+            "failed_count": failed_count,
+            "deleted_old_matches": deleted_matches
+        }
+        
+    except Exception as e:
+        db.rollback()
+        return {"ok": False, "error": str(e)}
+    finally:
+        db.close()
+
 @router.get("/fetch/facebook-marketplace")  
 def fetch_facebook_marketplace_listings():
     """
