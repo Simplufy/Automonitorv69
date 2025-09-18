@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Depends
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_, func
@@ -8,6 +8,7 @@ from app.db import SessionLocal
 from app.models import MatchResult, Listing
 from datetime import datetime, timedelta
 import time
+from typing import Optional
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -18,8 +19,8 @@ def dashboard(request: Request):
 
 @router.get("/listings", response_class=HTMLResponse)
 def listings_partial(request: Request, category: str = "PROFITABLE", min_conf: int = 0, 
-                     search: str = None, min_price: int = None, max_price: int = None,
-                     timeframe: str = None, make_filter: str = None):
+                     search: Optional[str] = None, min_price: Optional[int] = None, max_price: Optional[int] = None,
+                     timeframe: Optional[str] = None, make_filter: Optional[str] = None):
     # Retry logic for database connection issues
     max_retries = 3
     for attempt in range(max_retries):
@@ -89,6 +90,89 @@ def listings_partial(request: Request, category: str = "PROFITABLE", min_conf: i
         finally:
             db.close()
             break  # Exit retry loop on success
+
+@router.post("/api/refresh-data")
+def refresh_data_manual():
+    """Manual trigger to rescore all recent listings from last 24 hours"""
+    from app.routes.api_ingest import find_best_appraisal_for_listing
+    from app.services.scoring import score_listing
+    
+    # Initialize result tracking
+    result = {
+        "ok": True,
+        "message": "Data refresh completed",
+        "rescoring": {"ok": False, "processed": 0, "error": None},
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    db: Session = SessionLocal()
+    try:
+        # Rescore all recent listings (last 24 hours)
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        
+        recent_listings = db.query(Listing).filter(
+            Listing.ingested_at >= twenty_four_hours_ago
+        ).all()
+        
+        # Delete existing match results for these listings
+        if recent_listings:
+            deleted_matches = db.query(MatchResult).filter(
+                MatchResult.listing_id.in_([l.id for l in recent_listings])
+            ).delete(synchronize_session=False)
+            db.commit()
+        
+        processed_count = 0
+        failed_count = 0
+        
+        # Rescore each listing
+        for listing in recent_listings:
+            try:
+                appraisal, level, conf = find_best_appraisal_for_listing(db, listing)
+                res = score_listing(listing, appraisal)
+                
+                match = MatchResult(
+                    listing_id=listing.id, 
+                    appraisal_id=appraisal.id if appraisal else None,
+                    match_level=level, 
+                    match_confidence=conf,
+                    shipping_miles=res.get("shipping_miles"),
+                    shipping_cost=res.get("shipping_cost"),
+                    recon_cost=res.get("recon_cost"),
+                    pack_cost=res.get("pack_cost"),
+                    total_cost=res.get("total_cost"),
+                    gross_margin_dollars=res.get("gross_margin_dollars"),
+                    margin_percent=res.get("margin_percent"),
+                    category=res.get("category"),
+                    explanations=res.get("explanations")
+                )
+                db.add(match)
+                processed_count += 1
+                
+                # Commit in batches
+                if processed_count % 50 == 0:
+                    db.commit()
+                
+            except Exception as e:
+                print(f"Failed to rescore listing {listing.id}: {e}")
+                failed_count += 1
+        
+        db.commit()
+        result["rescoring"] = {"ok": True, "processed": processed_count, "failed": failed_count, "error": None}
+        result["message"] = f"Successfully rescored {processed_count} listings from last 24 hours"
+        
+        if failed_count > 0:
+            result["message"] += f" ({failed_count} failed)"
+        
+        return result
+        
+    except Exception as e:
+        db.rollback()
+        result["ok"] = False
+        result["rescoring"]["error"] = str(e)
+        result["message"] = f"Data refresh failed: {str(e)}"
+        return result
+    finally:
+        db.close()
 
 @router.get("/api/makes")
 def get_available_makes():

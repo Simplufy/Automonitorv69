@@ -56,6 +56,18 @@
         <button class="price-bracket" data-min="100000" data-max="" onclick="setPriceBracket(this)">$100K+</button>
       </div>
     </div>
+    
+    <!-- Data Management -->
+    <div class="filter-card glass-card">
+      <h3 class="filter-title">Data Management</h3>
+      <div class="refresh-section">
+        <button id="refresh-data-btn" class="refresh-btn" onclick="refreshData()">
+          <span id="refresh-text">🔄 Refresh Data (24h)</span>
+          <span id="refresh-spinner" class="spinner" style="display: none;">⏳ Processing...</span>
+        </button>
+        <div id="refresh-status" class="refresh-status"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Category Filters -->
@@ -238,6 +250,62 @@ function clearFilters() {
   
   // Apply filters (will show just category and 24h)
   applyFilters();
+}
+
+// Refresh data function
+async function refreshData() {
+  const btn = document.getElementById('refresh-data-btn');
+  const text = document.getElementById('refresh-text');
+  const spinner = document.getElementById('refresh-spinner');
+  const status = document.getElementById('refresh-status');
+  
+  // Show loading state
+  btn.disabled = true;
+  text.style.display = 'none';
+  spinner.style.display = 'inline';
+  status.innerHTML = '<div class="status-loading">🔄 Refreshing data...</div>';
+  
+  try {
+    const response = await fetch('/api/refresh-data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (result.ok) {
+      status.innerHTML = `
+        <div class="status-success">
+          ✅ ${result.message}<br>
+          <small>Last updated: ${new Date().toLocaleTimeString()}</small>
+        </div>
+      `;
+      
+      // Automatically refresh the current view after 2 seconds
+      setTimeout(() => {
+        applyFilters();
+      }, 2000);
+    } else {
+      status.innerHTML = `
+        <div class="status-error">
+          ❌ ${result.message}
+        </div>
+      `;
+    }
+  } catch (error) {
+    status.innerHTML = `
+      <div class="status-error">
+        ❌ Error refreshing data: ${error.message}
+      </div>
+    `;
+  } finally {
+    // Reset button state
+    btn.disabled = false;
+    text.style.display = 'inline';
+    spinner.style.display = 'none';
+  }
 }
 </script>
 {% endblock %}
