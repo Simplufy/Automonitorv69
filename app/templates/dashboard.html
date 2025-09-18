@@ -1,307 +1,243 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="dashboard-header">
-  <h2>Car Deals Dashboard</h2>
-  <p>Discover profitable automotive opportunities with accurate shipping and mileage analysis</p>
-</div>
+<link rel="stylesheet" href="/static/modern-styles.css">
 
-<div class="filters-section">
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h1 class="dashboard-title">AutoProfit</h1>
+    <p class="dashboard-subtitle">Discover profitable automotive opportunities with advanced market analysis</p>
+  </div>
+
+  <!-- Filters Container -->
+  <div class="filters-container">
+    <!-- Time-based Filters -->
+    <div class="filter-card glass-card">
+      <h3 class="filter-title">Time Period</h3>
+      <div class="time-filters">
+        <button class="time-toggle active" data-timeframe="24h" onclick="setTimeFilter(this)">24H</button>
+        <button class="time-toggle" data-timeframe="3d" onclick="setTimeFilter(this)">3D</button>
+        <button class="time-toggle" data-timeframe="7d" onclick="setTimeFilter(this)">7D</button>
+        <button class="time-toggle" data-timeframe="30d" onclick="setTimeFilter(this)">30D</button>
+        <button class="time-toggle" data-timeframe="" onclick="setTimeFilter(this)">All Time</button>
+      </div>
+    </div>
+
+    <!-- Search and Brand Filters -->
+    <div class="filter-card glass-card">
+      <h3 class="filter-title">Search & Brand</h3>
+      <div class="search-container">
+        <div class="input-group">
+          <label class="input-label">Search Vehicles</label>
+          <input type="text" id="search-input" placeholder="BMW M3, Audi Q5..." class="glass-input">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Brand</label>
+          <select id="make-filter" class="glass-select">
+            <option value="">All Brands</option>
+          </select>
+        </div>
+        <div class="action-buttons">
+          <button onclick="applyFilters()" class="btn-primary">Apply</button>
+          <button onclick="clearFilters()" class="btn-secondary">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Price Bracket Filter -->
+    <div class="filter-card glass-card">
+      <h3 class="filter-title">Price Brackets</h3>
+      <div class="price-brackets">
+        <button class="price-bracket active" data-min="" data-max="" onclick="setPriceBracket(this)">All Prices</button>
+        <button class="price-bracket" data-min="0" data-max="15000" onclick="setPriceBracket(this)">Under $15K</button>
+        <button class="price-bracket" data-min="15000" data-max="30000" onclick="setPriceBracket(this)">$15K - $30K</button>
+        <button class="price-bracket" data-min="30000" data-max="50000" onclick="setPriceBracket(this)">$30K - $50K</button>
+        <button class="price-bracket" data-min="50000" data-max="100000" onclick="setPriceBracket(this)">$50K - $100K</button>
+        <button class="price-bracket" data-min="100000" data-max="" onclick="setPriceBracket(this)">$100K+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Filters -->
   <div class="category-filters">
-    <button class="filter-btn active" hx-get="/listings?category=PROFITABLE" hx-target="#results" onclick="setActiveFilter(this)" data-category="PROFITABLE">
+    <button class="category-btn active profitable" data-category="PROFITABLE" onclick="setCategoryFilter(this)">
       💰 Profitable Deals
     </button>
-    <button class="filter-btn" hx-get="/listings?category=MAYBE" hx-target="#results" onclick="setActiveFilter(this)" data-category="MAYBE">
+    <button class="category-btn maybe" data-category="MAYBE" onclick="setCategoryFilter(this)">
       🤔 Maybe Worth It
     </button>
-    <button class="filter-btn" hx-get="/listings?category=UNKNOWN" hx-target="#results" onclick="setActiveFilter(this)" data-category="UNKNOWN">
+    <button class="category-btn unknown" data-category="UNKNOWN" onclick="setCategoryFilter(this)">
       ❓ Unknown Potential
     </button>
   </div>
-  
-  <div class="search-filters">
-    <div class="search-row">
-      <input type="text" id="search-input" placeholder="Search by make/model (e.g., 'Audi Q5', 'BMW M3')" class="search-input">
-      <div class="price-inputs">
-        <input type="number" id="min-price" placeholder="Min $" class="price-input">
-        <input type="number" id="max-price" placeholder="Max $" class="price-input">
-      </div>
-      <button onclick="applyFilters()" class="apply-btn">🔍 Search</button>
-      <button onclick="clearFilters()" class="clear-btn">✖️ Clear</button>
+
+  <!-- Results -->
+  <div id="results" hx-get="/listings?category=PROFITABLE&timeframe=24h" hx-trigger="load">
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading profitable deals...</p>
     </div>
   </div>
 </div>
 
-<div id="results" hx-get="/listings?category=PROFITABLE" hx-trigger="load">
-  <div class="loading-state">
-    <div class="loading-spinner"></div>
-    <p>Loading deals...</p>
-  </div>
-</div>
-
-<style>
-.dashboard-header {
-  text-align: center;
-  margin: 30px 0 40px 0;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.dashboard-header h2 {
-  font-size: 32px;
-  color: #111827;
-  margin-bottom: 12px;
-  font-weight: 700;
-}
-
-.dashboard-header p {
-  color: #6b7280;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.filters-section {
-  max-width: 1200px;
-  margin: 0 auto 40px auto;
-  padding: 0 20px;
-}
-
-.category-filters {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 30px;
-  flex-wrap: wrap;
-}
-
-.search-filters {
-  background: white;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.search-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.search-input {
-  flex: 1;
-  min-width: 250px;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 0.2s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-.price-inputs {
-  display: flex;
-  gap: 8px;
-}
-
-.price-input {
-  width: 100px;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 0.2s ease;
-}
-
-.price-input:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-.apply-btn, .clear-btn {
-  padding: 12px 20px;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.apply-btn {
-  background: #2563eb;
-  color: white;
-}
-
-.apply-btn:hover {
-  background: #1d4ed8;
-}
-
-.clear-btn {
-  background: #6b7280;
-  color: white;
-}
-
-.clear-btn:hover {
-  background: #4b5563;
-}
-
-.filter-btn {
-  background: white;
-  border: 2px solid #e5e7eb;
-  color: #374151;
-  padding: 16px 24px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  min-width: 180px;
-}
-
-.filter-btn:hover {
-  border-color: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.filter-btn.active {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.loading-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e5e7eb;
-  border-top: 4px solid #2563eb;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px auto;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@media (max-width: 768px) {
-  .category-filters {
-    flex-direction: column;
-  }
-  
-  .filter-btn {
-    min-width: unset;
-  }
-  
-  .dashboard-header {
-    padding: 0 20px;
-  }
-  
-  .search-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .search-input {
-    min-width: unset;
-  }
-  
-  .price-inputs {
-    justify-content: space-between;
-  }
-  
-  .price-input {
-    flex: 1;
-  }
-}
-</style>
-
 <script>
-function setActiveFilter(button) {
-  // Remove active class from all buttons
-  document.querySelectorAll('.filter-btn').forEach(btn => {
+// State management
+let currentFilters = {
+  category: 'PROFITABLE',
+  timeframe: '24h',
+  search: '',
+  makeFilter: '',
+  minPrice: '',
+  maxPrice: ''
+};
+
+// Load makes when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadMakes();
+  
+  // Add Enter key listener for search input
+  document.getElementById('search-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      applyFilters();
+    }
+  });
+});
+
+// Load available makes for dropdown
+async function loadMakes() {
+  try {
+    const response = await fetch('/api/makes');
+    const data = await response.json();
+    const makeSelect = document.getElementById('make-filter');
+    
+    // Clear existing options except first
+    makeSelect.innerHTML = '<option value="">All Brands</option>';
+    
+    // Add makes
+    data.makes.forEach(make => {
+      const option = document.createElement('option');
+      option.value = make;
+      option.textContent = make;
+      makeSelect.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error loading makes:', error);
+  }
+}
+
+// Time filter handler
+function setTimeFilter(button) {
+  // Remove active class from all time buttons
+  document.querySelectorAll('.time-toggle').forEach(btn => {
     btn.classList.remove('active');
   });
   
   // Add active class to clicked button
   button.classList.add('active');
   
-  // Clear search filters when switching categories
-  clearSearchInputs();
+  // Update current filters
+  currentFilters.timeframe = button.dataset.timeframe;
+  
+  // Apply filters immediately
+  applyFilters();
 }
 
+// Category filter handler
+function setCategoryFilter(button) {
+  // Remove active class from all category buttons
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Add active class to clicked button
+  button.classList.add('active');
+  
+  // Update current filters
+  currentFilters.category = button.dataset.category;
+  
+  // Apply filters immediately
+  applyFilters();
+}
+
+// Apply all filters
 function applyFilters() {
-  const category = document.querySelector('.filter-btn.active').dataset.category;
-  const search = document.getElementById('search-input').value;
-  const minPrice = document.getElementById('min-price').value;
-  const maxPrice = document.getElementById('max-price').value;
+  // Update current filters from form inputs
+  currentFilters.search = document.getElementById('search-input').value;
+  currentFilters.makeFilter = document.getElementById('make-filter').value;
+  // Note: minPrice and maxPrice are set by setPriceBracket function
   
-  let url = `/listings?category=${category}`;
+  // Build URL with all filters
+  let url = `/listings?category=${currentFilters.category}`;
   
-  if (search) {
-    url += `&search=${encodeURIComponent(search)}`;
+  if (currentFilters.timeframe) {
+    url += `&timeframe=${currentFilters.timeframe}`;
   }
   
-  if (minPrice) {
-    url += `&min_price=${minPrice}`;
+  if (currentFilters.search) {
+    url += `&search=${encodeURIComponent(currentFilters.search)}`;
   }
   
-  if (maxPrice) {
-    url += `&max_price=${maxPrice}`;
+  if (currentFilters.makeFilter) {
+    url += `&make_filter=${encodeURIComponent(currentFilters.makeFilter)}`;
+  }
+  
+  if (currentFilters.minPrice) {
+    url += `&min_price=${currentFilters.minPrice}`;
+  }
+  
+  if (currentFilters.maxPrice) {
+    url += `&max_price=${currentFilters.maxPrice}`;
   }
   
   // Use HTMX to load filtered results
   htmx.ajax('GET', url, {target: '#results'});
 }
 
+// Price bracket handler
+function setPriceBracket(button) {
+  // Remove active class from all price bracket buttons
+  document.querySelectorAll('.price-bracket').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Add active class to clicked button
+  button.classList.add('active');
+  
+  // Update current filters
+  currentFilters.minPrice = button.dataset.min || '';
+  currentFilters.maxPrice = button.dataset.max || '';
+  
+  // Apply filters immediately
+  applyFilters();
+}
+
+// Clear all filters
 function clearFilters() {
-  clearSearchInputs();
-  // Reload current category without filters
-  const category = document.querySelector('.filter-btn.active').dataset.category;
-  htmx.ajax('GET', `/listings?category=${category}`, {target: '#results'});
-}
-
-function clearSearchInputs() {
+  // Reset form inputs
   document.getElementById('search-input').value = '';
-  document.getElementById('min-price').value = '';
-  document.getElementById('max-price').value = '';
+  document.getElementById('make-filter').value = '';
+  
+  // Reset price bracket to "All Prices"
+  document.querySelectorAll('.price-bracket').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.querySelector('[data-min=""][data-max=""]').classList.add('active');
+  
+  // Reset time filter to 24h
+  document.querySelectorAll('.time-toggle').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.querySelector('[data-timeframe="24h"]').classList.add('active');
+  
+  // Update current filters
+  currentFilters.search = '';
+  currentFilters.makeFilter = '';
+  currentFilters.minPrice = '';
+  currentFilters.maxPrice = '';
+  currentFilters.timeframe = '24h';
+  
+  // Apply filters (will show just category and 24h)
+  applyFilters();
 }
-
-// Allow Enter key to trigger search
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('search-input').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      applyFilters();
-    }
-  });
-  
-  document.getElementById('min-price').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      applyFilters();
-    }
-  });
-  
-  document.getElementById('max-price').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      applyFilters();
-    }
-  });
-});
 </script>
 {% endblock %}
