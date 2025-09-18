@@ -241,75 +241,150 @@ def normalize_facebook_marketplace_item(item: dict) -> dict:
     }
 
 
-@router.post("/webhook/facebook-marketplace")
-def webhook_facebook_marketplace(payload: dict):
+@router.post("/fetch/facebook-marketplace")  
+def fetch_facebook_marketplace_listings(request: dict = None):
     """
-    Facebook Marketplace webhook endpoint
-    Accepts vehicle listings from Facebook Marketplace and processes them through AutoProfit
+    Fetch Facebook Marketplace listings using BrowseAI REST API
     
-    Expected payload format:
+    Request format (optional):
     {
-        "title": "2020 Honda Civic LX",
-        "price": 18000,
-        "mileage": 45000,
-        "year": 2020,
-        "make": "Honda", 
-        "model": "Civic",
-        "trim": "LX",
-        "location": "San Francisco, CA",
-        "images": ["https://...", "https://..."],
-        "url": "https://facebook.com/marketplace/item/...",
-        "seller": "John Doe"
+        "originUrl": "https://www.facebook.com/marketplace/category/vehicles", 
+        "cars_for_sale_limit": 50
     }
     """
+    import httpx
+    import os
+    
     try:
-        # If the payload contains vehicle info, parse it with OpenAI
-        title = payload.get("title", "")
-        if title and not all([payload.get("year"), payload.get("make"), payload.get("model")]):
-            parser = VehicleParser()
-            parsed = parser.parse(title)
+        # BrowseAI API configuration from the provided image
+        workspace_id = "10d44422-affe-4988-8864-bfdd2186bc7f"
+        robot_id = "b7b01349-ff3d-4853-b1e7-92e391cadc08"
+        
+        # Get API key from environment variables
+        api_key = os.getenv("BROWSEAI_API_KEY")
+        if not api_key:
+            return {"ok": False, "error": "missing_api_key", "message": "BrowseAI API key not found"}
+        
+        # Set default parameters or use provided ones
+        if request is None:
+            request = {}
             
-            # Update payload with parsed vehicle info if missing
-            if not payload.get("year") and parsed.get("year"):
-                payload["year"] = parsed["year"]
-            if not payload.get("make") and parsed.get("make"):
-                payload["make"] = parsed["make"] 
-            if not payload.get("model") and parsed.get("model"):
-                payload["model"] = parsed["model"]
-            if not payload.get("trim") and parsed.get("trim"):
-                payload["trim"] = parsed["trim"]
-
-        # Normalize Facebook data to our format
-        normalized = normalize_facebook_marketplace_item(payload)
+        origin_url = request.get("originUrl", "https://www.facebook.com/marketplace/category/vehicles")
+        limit = request.get("cars_for_sale_limit", 50)
         
-        # Ensure required fields are present and valid
-        make = normalized.get("make")
-        model = normalized.get("model") 
-        year = normalized.get("year", 0)
-        
-        if not make or not model or not year:
-            return {"ok": False, "error": "missing_vehicle_info", "message": "Year, make, and model are required"}
-        
-        # Reject placeholder values 
-        if make.lower() in ["unknown", "n/a", "none", ""] or model.lower() in ["unknown", "n/a", "none", ""]:
-            return {"ok": False, "error": "invalid_vehicle_info", "message": "Valid make and model are required (no placeholders)"}
-            
-        if year < 1900 or year > 2030:
-            return {"ok": False, "error": "invalid_year", "message": "Year must be between 1900 and 2030"}
-        
-        if not normalized.get("price") or normalized["price"] <= 0:
-            return {"ok": False, "error": "invalid_price", "message": "Valid price is required"}
-
-        # Use existing ingest logic
-        listing_data = ListingIn(**normalized)
-        result = ingest_listing(listing_data)
-        
-        return {
-            "ok": True, 
-            "message": "Facebook Marketplace listing processed successfully",
-            "listing_id": result.get("listing_id"),
-            "match_id": result.get("match_id")
+        # Call BrowseAI REST API to trigger robot
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
         }
+        
+        robot_data = {
+            "originUrl": origin_url,
+            "cars_for_sale_limit": limit
+        }
+        
+        with httpx.Client() as client:
+            # Trigger the robot
+            response = client.post(
+                f"https://api.browse.ai/v2/robots/{robot_id}/tasks",
+                headers=headers,
+                json=robot_data,
+                timeout=30
+            )
+            
+            if response.status_code != 201:
+                return {
+                    "ok": False, 
+                    "error": "browseai_error",
+                    "message": f"BrowseAI API error: {response.text}"
+                }
+            
+            task_data = response.json()
+            task_id = task_data.get("result", {}).get("id")
+            
+            if not task_id:
+                return {"ok": False, "error": "no_task_id", "message": "Failed to get task ID from BrowseAI"}
+            
+            # Wait for task completion and get results
+            import time
+            max_wait = 300  # 5 minutes max wait
+            wait_time = 0
+            
+            while wait_time < max_wait:
+                time.sleep(10)  # Wait 10 seconds between checks
+                wait_time += 10
+                
+                # Check task status
+                status_response = client.get(
+                    f"https://api.browse.ai/v2/robots/{robot_id}/tasks/{task_id}",
+                    headers=headers,
+                    timeout=30
+                )
+                
+                if status_response.status_code == 200:
+                    task_status = status_response.json()
+                    status = task_status.get("result", {}).get("status")
+                    
+                    if status == "successful":
+                        # Get the captured data
+                        captured_lists = task_status.get("result", {}).get("capturedLists", {})
+                        
+                        # Process the listings
+                        processed_count = 0
+                        failed_count = 0
+                        
+                        # Process each captured list (likely just one for cars)
+                        for list_name, listings in captured_lists.items():
+                            for listing in listings:
+                                try:
+                                    # Normalize the BrowseAI data to our format
+                                    normalized = normalize_facebook_marketplace_item(listing)
+                                    
+                                    # Validate required fields
+                                    make = normalized.get("make")
+                                    model = normalized.get("model")
+                                    year = normalized.get("year", 0)
+                                    price = normalized.get("price", 0)
+                                    
+                                    if (make and model and year >= 1900 and year <= 2030 and 
+                                        price > 0 and make.lower() not in ["unknown", "n/a", "none", ""] and 
+                                        model.lower() not in ["unknown", "n/a", "none", ""]):
+                                        
+                                        # Process the listing
+                                        listing_data = ListingIn(**normalized)
+                                        result = ingest_listing(listing_data)
+                                        processed_count += 1
+                                    else:
+                                        failed_count += 1
+                                        
+                                except Exception as e:
+                                    failed_count += 1
+                                    continue
+                        
+                        return {
+                            "ok": True,
+                            "message": "Facebook Marketplace listings fetched and processed successfully",
+                            "task_id": task_id,
+                            "processed_count": processed_count,
+                            "failed_count": failed_count,
+                            "total_listings": processed_count + failed_count
+                        }
+                    
+                    elif status == "failed":
+                        return {
+                            "ok": False,
+                            "error": "browseai_task_failed", 
+                            "message": f"BrowseAI task failed: {task_status.get('result', {}).get('error', 'Unknown error')}"
+                        }
+                    
+                    # Task still running, continue waiting
+                
+            # Timeout reached
+            return {
+                "ok": False,
+                "error": "timeout", 
+                "message": f"Task {task_id} did not complete within {max_wait} seconds"
+            }
         
     except Exception as e:
         return {"ok": False, "error": "processing_error", "message": str(e)}
