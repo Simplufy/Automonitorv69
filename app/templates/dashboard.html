@@ -31,12 +31,6 @@
           <label class="input-label">Search Vehicles</label>
           <input type="text" id="search-input" placeholder="BMW M3, Audi Q5..." class="glass-input">
         </div>
-        <div class="input-group">
-          <label class="input-label">Brand</label>
-          <select id="make-filter" class="glass-select">
-            <option value="">All Brands</option>
-          </select>
-        </div>
         <div class="action-buttons">
           <button onclick="applyFilters()" class="btn-primary">Apply</button>
           <button onclick="clearFilters()" class="btn-secondary">Clear</button>
@@ -98,16 +92,12 @@ let currentFilters = {
   category: 'PROFITABLE',
   timeframe: '24h',
   search: '',
-  makeFilter: '',
   minPrice: '',
   maxPrice: ''
 };
 
-// Load makes when page loads
+// Add Enter key listener for search input when page loads
 document.addEventListener('DOMContentLoaded', function() {
-  loadMakes();
-  
-  // Add Enter key listener for search input
   document.getElementById('search-input').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
       applyFilters();
@@ -115,27 +105,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// Load available makes for dropdown
-async function loadMakes() {
-  try {
-    const response = await fetch('/api/makes');
-    const data = await response.json();
-    const makeSelect = document.getElementById('make-filter');
-    
-    // Clear existing options except first
-    makeSelect.innerHTML = '<option value="">All Brands</option>';
-    
-    // Add makes
-    data.makes.forEach(make => {
-      const option = document.createElement('option');
-      option.value = make;
-      option.textContent = make;
-      makeSelect.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error loading makes:', error);
-  }
-}
 
 // Time filter handler
 function setTimeFilter(button) {
@@ -175,7 +144,6 @@ function setCategoryFilter(button) {
 function applyFilters() {
   // Update current filters from form inputs
   currentFilters.search = document.getElementById('search-input').value;
-  currentFilters.makeFilter = document.getElementById('make-filter').value;
   // Note: minPrice and maxPrice are set by setPriceBracket function
   
   // Build URL with all filters
@@ -189,9 +157,6 @@ function applyFilters() {
     url += `&search=${encodeURIComponent(currentFilters.search)}`;
   }
   
-  if (currentFilters.makeFilter) {
-    url += `&make_filter=${encodeURIComponent(currentFilters.makeFilter)}`;
-  }
   
   if (currentFilters.minPrice) {
     url += `&min_price=${currentFilters.minPrice}`;
@@ -227,7 +192,6 @@ function setPriceBracket(button) {
 function clearFilters() {
   // Reset form inputs
   document.getElementById('search-input').value = '';
-  document.getElementById('make-filter').value = '';
   
   // Reset price bracket to "All Prices"
   document.querySelectorAll('.price-bracket').forEach(btn => {
@@ -243,7 +207,6 @@ function clearFilters() {
   
   // Update current filters
   currentFilters.search = '';
-  currentFilters.makeFilter = '';
   currentFilters.minPrice = '';
   currentFilters.maxPrice = '';
   currentFilters.timeframe = '24h';
