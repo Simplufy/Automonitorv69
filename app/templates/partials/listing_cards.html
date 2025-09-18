@@ -17,7 +17,14 @@
       {% endif %}
       
       {% if image_url and image_url != '' %}
-        <img src="{{ image_url }}" alt="{{ m.listing.year }} {{ m.listing.make }} {{ m.listing.model }}" onerror="this.src='/static/placeholder-car.jpg'" loading="lazy" crossorigin="anonymous">
+        {% if 'fbcdn.net' in image_url %}
+          {# Facebook images get blocked by CORS, use placeholder for now #}
+          <div class="image-placeholder">
+            🚗
+          </div>
+        {% else %}
+          <img src="{{ image_url }}" alt="{{ m.listing.year }} {{ m.listing.make }} {{ m.listing.model }}" onerror="this.src='/static/placeholder-car.jpg'" loading="lazy" crossorigin="anonymous">
+        {% endif %}
       {% else %}
         <div class="image-placeholder">
           🚗
