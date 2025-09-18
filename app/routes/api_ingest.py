@@ -132,8 +132,9 @@ def ingest_freeform(payload: dict):
 
 
 def normalize_facebook_marketplace_item(item: dict) -> dict:
-    """Normalize Facebook Marketplace webhook data to ListingIn format"""
+    """Normalize Facebook Marketplace scraped data to ListingIn format"""
     import hashlib
+    import re
     
     def g(*keys, default=None):
         for k in keys:
@@ -141,59 +142,100 @@ def normalize_facebook_marketplace_item(item: dict) -> dict:
                 return item[k]
         return default
 
-    # Handle price - ensure it's an integer
-    price = g("price", "asking_price", "cost", default=0)
-    if isinstance(price, str):
-        try:
-            price = int("".join(ch for ch in price if ch.isdigit()))
-        except Exception:
-            price = 0
+    # Handle price - Facebook format: "$32,300" or "$32,000\n$34,000"
+    price_str = g("Price", "price", default="0")
+    if isinstance(price_str, str):
+        # Handle multiple prices (take the first one)
+        price_str = price_str.split('\n')[0]
+        # Remove $ and commas, extract digits
+        price = int("".join(ch for ch in price_str if ch.isdigit()) or 0)
+    else:
+        price = 0
 
-    # Handle mileage 
-    mileage = g("mileage", "odometer", "miles", default=None)
-    if isinstance(mileage, str):
-        try:
-            mileage = int("".join(ch for ch in mileage if ch.isdigit()))
-        except Exception:
-            mileage = None
+    # Handle mileage - Facebook format: "56K miles" or "56K miles · Dealership"
+    mileage_str = g("Mileage", "mileage", default="")
+    mileage = None
+    if isinstance(mileage_str, str):
+        # Extract number and K multiplier
+        match = re.search(r'(\d+)K?\s*miles', mileage_str, re.IGNORECASE)
+        if match:
+            mileage_num = int(match.group(1))
+            if 'K' in mileage_str.upper():
+                mileage = mileage_num * 1000
+            else:
+                mileage = mileage_num
 
-    # Generate VIN if not provided (Facebook often doesn't have VIN)
-    vin = g("vin", "VIN", default=None)
+    # Parse Car Model - Facebook format: "2020 BMW x5 xDrive40i Sport Utility 4D"
+    car_model = g("Car Model", "title", "name", default="")
+    year = None
+    make = None
+    model = None
+    trim = None
+    
+    if car_model:
+        # Extract year (4 digits at start)
+        year_match = re.search(r'^(\d{4})\s+', car_model)
+        if year_match:
+            year = int(year_match.group(1))
+            # Remove year from string for further parsing
+            remaining = car_model[year_match.end():].strip()
+            
+            # Split remaining into parts
+            parts = remaining.split()
+            if len(parts) >= 2:
+                make = parts[0]  # BMW
+                model = parts[1]  # x5
+                
+                # Everything after make/model is trim
+                if len(parts) > 2:
+                    trim_parts = parts[2:]
+                    # Filter out common suffixes
+                    trim_parts = [p for p in trim_parts if p.lower() not in ['sport', 'utility', '4d']]
+                    trim = ' '.join(trim_parts) if trim_parts else None
+
+    # Generate VIN from listing URL for deduplication
+    listing_url = g("Listing URL", "url", "link", default="")
+    vin = None
+    if listing_url:
+        # Extract Facebook item ID from URL for deterministic VIN
+        match = re.search(r'/item/(\d+)/?', listing_url)
+        if match:
+            fb_id = match.group(1)
+            # Create deterministic VIN from Facebook item ID
+            vin_data = f"FB_{fb_id}_{car_model}".encode('utf-8')
+            vin_hash = hashlib.sha256(vin_data).hexdigest()[:13]
+            vin = f"FB{vin_hash}00"[:17]
+    
     if not vin:
-        # Create a deterministic pseudo-VIN from item data for deduplication
-        title = g("title", "name", "description", default="")
-        fb_id = g("id", "listing_id", "post_id", default="")
-        # Use deterministic hash for consistent VIN generation
-        vin_data = f"FB_{fb_id}_{title}".encode('utf-8')
-        vin_hash = hashlib.sha256(vin_data).hexdigest()[:13]  # 13 chars + "FB" prefix = 15, pad to 17
+        # Fallback VIN generation
+        vin_data = f"FB_{car_model}_{price}".encode('utf-8')
+        vin_hash = hashlib.sha256(vin_data).hexdigest()[:13]
         vin = f"FB{vin_hash}00"[:17]
 
-    # Handle images - Facebook uses different field names
+    # Handle images - Facebook uses single "Car Image" field
     raw_item = item.copy()
-    images = g("images", "photos", "picture", "image_urls", default=None)
-    if images:
-        if isinstance(images, str):
-            # Single image URL
-            raw_item["images"] = [images]
-        elif isinstance(images, list):
-            # List of image URLs
-            raw_item["images"] = images
+    car_image = g("Car Image", "image", "photo", default=None)
+    if car_image:
+        raw_item["images"] = [car_image]
+
+    # Determine seller type from mileage field
+    seller_type = "dealership" if "dealership" in mileage_str.lower() else "private"
 
     return {
         "vin": vin,
-        "year": int(g("year", "model_year", default=0) or 0),
-        "make": g("make", "brand", "manufacturer", default=None),
-        "model": g("model", "model_name", default=None),
-        "trim": g("trim", "variant", "trim_level", default=None),
+        "year": year or 0,
+        "make": make,
+        "model": model, 
+        "trim": trim,
         "price": price,
         "mileage": mileage,
-        "url": g("url", "link", "facebook_url", default="https://facebook.com/marketplace"),
-        "seller": g("seller", "seller_name", "posted_by", default=None),
-        "seller_type": "private",  # Facebook Marketplace is typically private sellers
-        "location": g("location", "city", "address", default=None),
-        "lat": g("lat", "latitude", default=None),
-        "lon": g("lon", "longitude", "lng", default=None),
-        "zip": g("zip", "postal_code", "zipcode", default=None),
+        "url": listing_url or "https://facebook.com/marketplace",
+        "seller": None,  # Not provided in this format
+        "seller_type": seller_type,
+        "location": g("Location", "location", default=None),
+        "lat": None,  # Not provided in this format
+        "lon": None,  # Not provided in this format
+        "zip": None,  # Not provided in this format
         "source": "facebook_marketplace",
         "raw": raw_item,
     }
