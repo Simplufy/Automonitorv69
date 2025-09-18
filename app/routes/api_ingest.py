@@ -292,7 +292,7 @@ def fetch_facebook_marketplace_listings(request: dict = None):
                 timeout=30
             )
             
-            if response.status_code != 201:
+            if response.status_code not in [200, 201]:
                 return {
                     "ok": False, 
                     "error": "browseai_error",
