@@ -323,6 +323,13 @@ input.glass-input:-webkit-autofill:focus {
   box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
 }
 
+.platform-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
 /* Header Nav Buttons */
 
 .nav-btn.glass-btn {
