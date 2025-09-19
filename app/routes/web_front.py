@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Depends
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_, func
@@ -9,6 +9,9 @@ from app.models import MatchResult, Listing
 from datetime import datetime, timedelta
 import time
 from typing import Optional
+import httpx
+import hashlib
+import base64
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -160,3 +163,50 @@ def get_available_makes():
         finally:
             db.close()
             break
+
+@router.get("/proxy-image")
+async def proxy_image(url: str):
+    """Proxy images to bypass CORS restrictions"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Set headers to mimic a regular browser request
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+            
+            response = await client.get(url, headers=headers, follow_redirects=True)
+            
+            if response.status_code == 200:
+                content_type = response.headers.get('content-type', 'image/jpeg')
+                
+                # Return the image with proper headers
+                return Response(
+                    content=response.content,
+                    media_type=content_type,
+                    headers={
+                        'Cache-Control': 'public, max-age=3600',  # Cache for 1 hour
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                )
+            else:
+                # Return a simple placeholder if image fetch fails
+                return Response(
+                    content="data:image/svg+xml;base64," + base64.b64encode(
+                        f'<svg width="200" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="150" fill="#f0f0f0"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" font-family="Arial" font-size="14" fill="#666">🚗 Vehicle</text></svg>'.encode()
+                    ).decode(),
+                    media_type="image/svg+xml"
+                )
+                
+    except Exception as e:
+        print(f"Error proxying image {url}: {e}")
+        # Return a simple placeholder on error
+        return Response(
+            content="data:image/svg+xml;base64," + base64.b64encode(
+                f'<svg width="200" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="150" fill="#f0f0f0"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" font-family="Arial" font-size="14" fill="#666">🚗 Vehicle</text></svg>'.encode()
+            ).decode(),
+            media_type="image/svg+xml"
+        )
