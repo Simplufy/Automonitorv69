@@ -82,10 +82,9 @@ body::before {
   font-weight: 400;
   position: absolute;
   left: 0;
-  bottom: -2rem;
+  bottom: -4rem;
   max-width: 600px;
   margin-top: 0.75rem;
-  padding-top: 2rem;
 }
 
 .header-actions {
