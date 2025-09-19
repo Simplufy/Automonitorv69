@@ -7,13 +7,14 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   </head>
   <body>
-    <header>
-      <h1>AutoProfit</h1>
-      <nav>
-        <a href="/">Dashboard</a> |
-        <a href="/admin">Admin</a>
-      </nav>
-      <hr>
+    <header class="main-header">
+      <div class="header-content">
+        <h1 class="app-title">AutoProfit</h1>
+        <nav class="header-nav">
+          <a href="/" class="nav-btn glass-btn">📊 Dashboard</a>
+          <a href="/admin" class="nav-btn glass-btn">⚙️ Admin</a>
+        </nav>
+      </div>
     </header>
     {% block content %}{% endblock %}
   </body>

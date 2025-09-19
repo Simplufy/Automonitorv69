@@ -32,7 +32,7 @@
           <input type="text" id="search-input" placeholder="BMW M3, Audi Q5..." class="glass-input">
         </div>
         <div class="action-buttons">
-          <button onclick="applyFilters()" class="btn-primary">Apply</button>
+          <button onclick="applyFilters()" class="btn-primary apply-btn">Apply</button>
         </div>
       </div>
     </div>
@@ -48,6 +48,15 @@
       </div>
     </div>
 
+    <!-- Data Refresh -->
+    <div class="refresh-container">
+      <button id="refresh-data-btn" class="refresh-btn glass-btn" onclick="refreshData()">
+        <span id="refresh-text">🔄 Refresh Data (24h)</span>
+        <span id="refresh-spinner" class="spinner" style="display: none;">⏳ Processing...</span>
+      </button>
+      <div id="refresh-status" class="refresh-status"></div>
+    </div>
+
     <!-- Price Bracket Filter -->
     <div class="filter-card glass-card">
       <h3 class="filter-title">Price Brackets</h3>
@@ -58,18 +67,6 @@
         <button class="price-bracket" data-min="30000" data-max="50000" onclick="setPriceBracket(this)">$30K - $50K</button>
         <button class="price-bracket" data-min="50000" data-max="100000" onclick="setPriceBracket(this)">$50K - $100K</button>
         <button class="price-bracket" data-min="100000" data-max="" onclick="setPriceBracket(this)">$100K+</button>
-      </div>
-    </div>
-    
-    <!-- Data Management -->
-    <div class="filter-card glass-card">
-      <h3 class="filter-title">Data Management</h3>
-      <div class="refresh-section">
-        <button id="refresh-data-btn" class="refresh-btn" onclick="refreshData()">
-          <span id="refresh-text">🔄 Refresh Data (24h)</span>
-          <span id="refresh-spinner" class="spinner" style="display: none;">⏳ Processing...</span>
-        </button>
-        <div id="refresh-status" class="refresh-status"></div>
       </div>
     </div>
   </div>
