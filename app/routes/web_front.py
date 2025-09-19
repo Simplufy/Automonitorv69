@@ -36,6 +36,15 @@ def listings_partial(request: Request, category: str = "PROFITABLE", min_conf: i
             if timeframe == "24h":
                 cutoff = now - timedelta(hours=24)
                 q = q.filter(Listing.ingested_at >= cutoff)
+            elif timeframe == "3d":
+                cutoff = now - timedelta(days=3)
+                q = q.filter(Listing.ingested_at >= cutoff)
+            elif timeframe == "7d":
+                cutoff = now - timedelta(days=7)
+                q = q.filter(Listing.ingested_at >= cutoff)
+            elif timeframe == "30d":
+                cutoff = now - timedelta(days=30)
+                q = q.filter(Listing.ingested_at >= cutoff)
         
         # Get results
         q = q.order_by(desc(MatchResult.margin_percent))

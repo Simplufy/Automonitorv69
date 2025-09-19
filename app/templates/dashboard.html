@@ -15,9 +15,9 @@
     <div class="filter-card glass-card">
       <h3 class="filter-title">Time Period</h3>
       <div class="time-filters">
-        <button class="time-toggle active" data-timeframe="24h" onclick="setTimeFilter(this)">24H</button>
+        <button class="time-toggle" data-timeframe="24h" onclick="setTimeFilter(this)">24H</button>
         <button class="time-toggle" data-timeframe="3d" onclick="setTimeFilter(this)">3D</button>
-        <button class="time-toggle" data-timeframe="7d" onclick="setTimeFilter(this)">7D</button>
+        <button class="time-toggle active" data-timeframe="7d" onclick="setTimeFilter(this)">7D</button>
         <button class="time-toggle" data-timeframe="30d" onclick="setTimeFilter(this)">30D</button>
         <button class="time-toggle" data-timeframe="" onclick="setTimeFilter(this)">All Time</button>
       </div>
@@ -78,20 +78,11 @@
   </div>
 
   <!-- Results -->
-  <div id="results" hx-get="/listings?category=PROFITABLE&timeframe=24h" hx-trigger="load" hx-indicator="#loading">
-    <div class="loading-state" id="loading">
+  <div id="results" hx-get="/listings?category=PROFITABLE&timeframe=7d" hx-trigger="load">
+    <div class="loading-state">
       <div class="loading-spinner"></div>
       <p>Loading profitable deals...</p>
     </div>
-  </div>
-  
-  <!-- Debug Info (remove after fixing) -->
-  <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; font-family: monospace; font-size: 12px;">
-    <strong>Debug Info:</strong><br>
-    • Database: 2,682 PROFITABLE matches available<br>
-    • API Status: <span id="api-status">Testing...</span><br>
-    • HTMX Status: <span id="htmx-status">Loading...</span><br>
-    • Time: <span id="debug-time"></span>
   </div>
 </div>
 
@@ -99,7 +90,7 @@
 // State management
 let currentFilters = {
   category: 'PROFITABLE',
-  timeframe: '24h',
+  timeframe: '7d',
   search: '',
   minPrice: '',
   maxPrice: ''
@@ -112,53 +103,6 @@ document.addEventListener('DOMContentLoaded', function() {
       applyFilters();
     }
   });
-  
-  // Debug info update
-  document.getElementById('debug-time').textContent = new Date().toLocaleString();
-  
-  // Test API connectivity
-  fetch('/listings?category=PROFITABLE&timeframe=24h')
-    .then(response => {
-      document.getElementById('api-status').textContent = 'Connected ✅ (' + response.status + ')';
-      return response.text();
-    })
-    .then(data => {
-      if (data.length > 100) {
-        document.getElementById('api-status').textContent = 'Connected ✅ (Data: ' + data.length + ' chars)';
-      } else {
-        document.getElementById('api-status').textContent = 'Connected ⚠️ (Low data: ' + data.length + ' chars)';
-      }
-    })
-    .catch(error => {
-      document.getElementById('api-status').textContent = 'Failed ❌ (' + error.message + ')';
-    });
-  
-  // Check HTMX status
-  if (typeof htmx !== 'undefined') {
-    document.getElementById('htmx-status').textContent = 'Loaded ✅';
-    
-    // Add HTMX event listeners for debugging
-    document.body.addEventListener('htmx:beforeRequest', function(e) {
-      console.log('HTMX: Starting request to', e.detail.requestConfig.path);
-      document.getElementById('htmx-status').textContent = 'Requesting... ⏳';
-    });
-    
-    document.body.addEventListener('htmx:afterRequest', function(e) {
-      console.log('HTMX: Request completed', e.detail.xhr.status);
-      if (e.detail.xhr.status === 200) {
-        document.getElementById('htmx-status').textContent = 'Success ✅ (' + e.detail.xhr.responseText.length + ' chars)';
-      } else {
-        document.getElementById('htmx-status').textContent = 'Error ❌ (' + e.detail.xhr.status + ')';
-      }
-    });
-    
-    document.body.addEventListener('htmx:responseError', function(e) {
-      console.log('HTMX: Response error', e.detail);
-      document.getElementById('htmx-status').textContent = 'Response Error ❌';
-    });
-  } else {
-    document.getElementById('htmx-status').textContent = 'Missing ❌';
-  }
 });
 
 
