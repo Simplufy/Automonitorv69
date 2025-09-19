@@ -81,8 +81,9 @@ body::before {
   font-weight: 400;
   position: absolute;
   left: 0;
-  bottom: -1.5rem;
+  bottom: -2rem;
   max-width: 600px;
+  margin-top: 0.75rem;
 }
 
 .header-actions {
@@ -90,6 +91,12 @@ body::before {
   flex-direction: column;
   align-items: flex-end;
   gap: 0.5rem;
+}
+
+.header-actions .header-nav {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 /* Glass Morphism Cards */
@@ -316,39 +323,7 @@ input.glass-input:-webkit-autofill:focus {
   box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
 }
 
-/* Header Styling */
-.main-header {
-  background: rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  padding: 1rem 0;
-  margin-bottom: 2rem;
-}
-
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.app-title {
-  color: white;
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0;
-  background: linear-gradient(135deg, var(--accent-blue), #60a5fa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.header-nav {
-  display: flex;
-  gap: 1rem;
-}
+/* Header Nav Buttons */
 
 .nav-btn.glass-btn {
   padding: 0.75rem 1.5rem;

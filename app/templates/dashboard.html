@@ -8,10 +8,14 @@
     <h1 class="dashboard-title">AutoProfit</h1>
     <p class="dashboard-subtitle">Discover profitable automotive opportunities with advanced market analysis</p>
     <div class="header-actions">
-      <button id="refresh-data-btn" class="refresh-btn glass-btn" onclick="refreshData()">
-        <span id="refresh-text">🔄 Refresh Data (24h)</span>
-        <span id="refresh-spinner" class="spinner" style="display: none;">⏳ Processing...</span>
-      </button>
+      <div class="header-nav">
+        <a href="/" class="nav-btn glass-btn">📊 Dashboard</a>
+        <a href="/admin" class="nav-btn glass-btn">⚙️ Admin</a>
+        <button id="refresh-data-btn" class="refresh-btn glass-btn" onclick="refreshData()">
+          <span id="refresh-text">🔄 Refresh Data (24h)</span>
+          <span id="refresh-spinner" class="spinner" style="display: none;">⏳ Processing...</span>
+        </button>
+      </div>
       <div id="refresh-status" class="refresh-status"></div>
     </div>
   </div>
