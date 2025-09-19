@@ -58,8 +58,11 @@ body::before {
 
 /* Header */
 .dashboard-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 3rem;
+  position: relative;
 }
 
 .dashboard-title {
@@ -68,7 +71,7 @@ body::before {
   background: linear-gradient(135deg, #ffffff, #a1a1aa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 1rem;
+  margin: 0;
   letter-spacing: -0.02em;
 }
 
@@ -76,6 +79,17 @@ body::before {
   font-size: 1.25rem;
   color: var(--text-secondary);
   font-weight: 400;
+  position: absolute;
+  left: 0;
+  bottom: -1.5rem;
+  max-width: 600px;
+}
+
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
 }
 
 /* Glass Morphism Cards */

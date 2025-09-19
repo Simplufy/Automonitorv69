@@ -7,6 +7,13 @@
   <div class="dashboard-header">
     <h1 class="dashboard-title">AutoProfit</h1>
     <p class="dashboard-subtitle">Discover profitable automotive opportunities with advanced market analysis</p>
+    <div class="header-actions">
+      <button id="refresh-data-btn" class="refresh-btn glass-btn" onclick="refreshData()">
+        <span id="refresh-text">🔄 Refresh Data (24h)</span>
+        <span id="refresh-spinner" class="spinner" style="display: none;">⏳ Processing...</span>
+      </button>
+      <div id="refresh-status" class="refresh-status"></div>
+    </div>
   </div>
 
   <!-- Filters Container -->
@@ -47,16 +54,10 @@
         <button class="platform-btn" data-source="autotrader" onclick="setPlatformFilter(this)">🏁 AutoTrader</button>
       </div>
     </div>
+  </div>
 
-    <!-- Data Refresh -->
-    <div class="refresh-container">
-      <button id="refresh-data-btn" class="refresh-btn glass-btn" onclick="refreshData()">
-        <span id="refresh-text">🔄 Refresh Data (24h)</span>
-        <span id="refresh-spinner" class="spinner" style="display: none;">⏳ Processing...</span>
-      </button>
-      <div id="refresh-status" class="refresh-status"></div>
-    </div>
-
+  <!-- Second Filter Row -->
+  <div class="filters-container">
     <!-- Price Bracket Filter -->
     <div class="filter-card glass-card">
       <h3 class="filter-title">Price Brackets</h3>
