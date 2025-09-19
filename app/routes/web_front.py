@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_, func
+from sqlalchemy import desc, and_, func, or_
 from sqlalchemy.exc import OperationalError
 from app.db import SessionLocal
 from app.models import MatchResult, Listing
@@ -24,7 +24,7 @@ def dashboard(request: Request):
 @router.get("/listings", response_class=HTMLResponse)
 def listings_partial(request: Request, category: str = "PROFITABLE", min_conf: int = 0, 
                      search: Optional[str] = None, min_price: Optional[int] = None, max_price: Optional[int] = None,
-                     timeframe: Optional[str] = None, make_filter: Optional[str] = None):
+                     timeframe: Optional[str] = None, make_filter: Optional[str] = None, source: Optional[str] = None):
     db: Session = SessionLocal()
     try:
         # Query for listings
@@ -45,6 +45,26 @@ def listings_partial(request: Request, category: str = "PROFITABLE", min_conf: i
             elif timeframe == "30d":
                 cutoff = now - timedelta(days=30)
                 q = q.filter(Listing.ingested_at >= cutoff)
+        
+        # Source/platform filtering
+        if source:
+            q = q.filter(Listing.source == source)
+        
+        # Price filtering
+        if min_price:
+            q = q.filter(Listing.price >= min_price)
+        if max_price:
+            q = q.filter(Listing.price <= max_price)
+        
+        # Search filtering
+        if search:
+            search_term = f"%{search.lower()}%"
+            q = q.filter(or_(
+                func.lower(Listing.make).like(search_term),
+                func.lower(Listing.model).like(search_term),
+                func.lower(Listing.trim).like(search_term),
+                func.concat(func.lower(Listing.make), ' ', func.lower(Listing.model)).like(search_term)
+            ))
         
         # Get results
         q = q.order_by(desc(MatchResult.margin_percent))

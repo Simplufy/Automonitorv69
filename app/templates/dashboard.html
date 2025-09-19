@@ -37,6 +37,17 @@
       </div>
     </div>
 
+    <!-- Platform Filter -->
+    <div class="filter-card glass-card">
+      <h3 class="filter-title">Platforms</h3>
+      <div class="platform-filters">
+        <button class="platform-btn active" data-source="" onclick="setPlatformFilter(this)">All Platforms</button>
+        <button class="platform-btn" data-source="facebook_marketplace" onclick="setPlatformFilter(this)">📘 Facebook</button>
+        <button class="platform-btn" data-source="cars_com" onclick="setPlatformFilter(this)">🚗 Cars.com</button>
+        <button class="platform-btn" data-source="autotrader" onclick="setPlatformFilter(this)">🏁 AutoTrader</button>
+      </div>
+    </div>
+
     <!-- Price Bracket Filter -->
     <div class="filter-card glass-card">
       <h3 class="filter-title">Price Brackets</h3>
@@ -92,7 +103,8 @@ let currentFilters = {
   timeframe: '7d',
   search: '',
   minPrice: '',
-  maxPrice: ''
+  maxPrice: '',
+  source: ''
 };
 
 // Add Enter key listener for search input when page loads
@@ -165,8 +177,29 @@ function applyFilters() {
     url += `&max_price=${currentFilters.maxPrice}`;
   }
   
+  if (currentFilters.source) {
+    url += `&source=${currentFilters.source}`;
+  }
+  
   // Use HTMX to load filtered results
   htmx.ajax('GET', url, {target: '#results'});
+}
+
+// Platform filter handler
+function setPlatformFilter(button) {
+  // Remove active class from all platform buttons
+  document.querySelectorAll('.platform-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Add active class to clicked button
+  button.classList.add('active');
+  
+  // Update current filters
+  currentFilters.source = button.dataset.source;
+  
+  // Apply filters immediately
+  applyFilters();
 }
 
 // Price bracket handler
@@ -198,6 +231,12 @@ function clearFilters() {
   });
   document.querySelector('[data-min=""][data-max=""]').classList.add('active');
   
+  // Reset platform filter to "All Platforms"
+  document.querySelectorAll('.platform-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.querySelector('[data-source=""]').classList.add('active');
+  
   // Reset time filter to 24h
   document.querySelectorAll('.time-toggle').forEach(btn => {
     btn.classList.remove('active');
@@ -208,6 +247,7 @@ function clearFilters() {
   currentFilters.search = '';
   currentFilters.minPrice = '';
   currentFilters.maxPrice = '';
+  currentFilters.source = '';
   currentFilters.timeframe = '24h';
   
   // Apply filters (will show just category and 24h)
