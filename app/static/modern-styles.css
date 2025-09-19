@@ -58,11 +58,11 @@ body::before {
 
 /* Header */
 .dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
   margin-bottom: 3rem;
-  position: relative;
+  column-gap: 2rem;
 }
 
 .dashboard-title {
@@ -71,8 +71,7 @@ body::before {
   background: linear-gradient(135deg, #ffffff, #a1a1aa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0;
-  margin-bottom: 6rem;
+  margin: 0 0 0.5rem 0;
   letter-spacing: -0.02em;
 }
 
@@ -80,11 +79,10 @@ body::before {
   font-size: 1.25rem;
   color: var(--text-secondary);
   font-weight: 400;
-  position: absolute;
-  left: 0;
-  bottom: -4rem;
+  position: static;
   max-width: 600px;
-  margin-top: 0.75rem;
+  margin: 0;
+  padding-top: 0.5rem;
 }
 
 .header-actions {
@@ -92,6 +90,9 @@ body::before {
   flex-direction: column;
   align-items: flex-end;
   gap: 0.5rem;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
 }
 
 .header-actions .header-nav {
