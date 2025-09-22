@@ -230,21 +230,37 @@ async def proxy_image(url: str):
                         <defs>
                             <linearGradient id="fbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" style="stop-color:#1877F2;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#42A5F5;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#0866FF;stop-opacity:1" />
+                            </linearGradient>
+                            <linearGradient id="carGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9" />
+                                <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.7" />
                             </linearGradient>
                         </defs>
-                        <rect width="260" height="260" fill="url(#fbGrad)"/>
-                        <circle cx="130" cy="110" r="40" fill="white" opacity="0.9"/>
-                        <path d="M 110 95 L 110 125 L 150 125 L 150 95 Z M 120 105 L 140 105 L 140 115 L 120 115 Z" fill="#1877F2"/>
-                        <text x="130" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white">Facebook</text>
-                        <text x="130" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="white" opacity="0.8">Marketplace</text>
-                        <text x="130" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="white" opacity="0.6">Image Protected</text>
+                        
+                        <!-- Background -->
+                        <rect width="260" height="260" fill="url(#fbGrad)" rx="12"/>
+                        
+                        <!-- Facebook logo area -->
+                        <circle cx="50" cy="50" r="25" fill="white" opacity="0.15"/>
+                        <text x="50" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">f</text>
+                        
+                        <!-- Car silhouette -->
+                        <g transform="translate(130, 120) scale(2.5)">
+                            <path d="M2 14h2v4H2v-4zm12 0h2v4h-2v-4zM5 12V7l2-2h6l2 2v5H5zm2.5 1.5A1.5 1.5 0 009 15a1.5 1.5 0 00-1.5-1.5zm7 0A1.5 1.5 0 0016 15a1.5 1.5 0 00-1.5-1.5z" 
+                                  fill="url(#carGrad)" stroke="white" stroke-width="0.5"/>
+                        </g>
+                        
+                        <!-- Text -->
+                        <text x="130" y="190" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="600" fill="white">Facebook Marketplace</text>
+                        <text x="130" y="215" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="white" opacity="0.8">Images Protected by Security</text>
+                        <text x="130" y="235" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white" opacity="0.6">Vehicle details available below</text>
                     </svg>'''
                     return Response(
                         content=facebook_placeholder,
                         media_type="image/svg+xml",
                         headers={
-                            'Cache-Control': 'public, max-age=3600',
+                            'Cache-Control': 'public, max-age=86400',  # Cache for 24 hours
                             'Access-Control-Allow-Origin': '*'
                         }
                     )
