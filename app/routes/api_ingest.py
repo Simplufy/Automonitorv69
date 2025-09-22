@@ -441,7 +441,7 @@ def rescore_recent_listings():
 @router.get("/fetch/facebook-marketplace")  
 def fetch_facebook_marketplace_listings():
     """
-    Fetch completed Facebook Marketplace listings from BrowseAI from the last 24 hours
+    Fetch completed Facebook Marketplace listings from BrowseAI from the last 72 hours
     """
     import httpx
     import os
@@ -492,62 +492,78 @@ def fetch_facebook_marketplace_listings():
             if not tasks:
                 return {
                     "ok": True,
-                    "message": "No completed Facebook Marketplace tasks found in the last 24 hours",
+                    "message": "No completed Facebook Marketplace tasks found in the last 72 hours",
                     "processed_count": 0,
                     "failed_count": 0,
                     "total_listings": 0
                 }
             
-            # Process all completed tasks
+            # Process tasks in batches of 5 to avoid timeouts
             processed_count = 0
             failed_count = 0
             total_tasks = len(tasks)
+            batch_size = 5
             
-            for task in tasks:
-                task_id = task.get("id")
+            print(f"Processing {total_tasks} Facebook Marketplace tasks in batches of {batch_size}")
+            
+            for i in range(0, total_tasks, batch_size):
+                batch_tasks = tasks[i:i + batch_size]
+                print(f"Processing batch {i//batch_size + 1} of {(total_tasks + batch_size - 1)//batch_size}: {len(batch_tasks)} tasks")
                 
-                # Get detailed task data including captured lists
-                task_response = client.get(
-                    f"https://api.browse.ai/v2/robots/{robot_id}/tasks/{task_id}",
-                    headers=headers,
-                    timeout=30
-                )
-                
-                if task_response.status_code == 200:
-                    task_detail = task_response.json()
-                    captured_lists = task_detail.get("result", {}).get("capturedLists", {})
+                for task in batch_tasks:
+                    task_id = task.get("id")
                     
-                    # Process each captured list (cars_for_sale)
-                    for list_name, listings in captured_lists.items():
-                        for listing in listings:
-                            try:
-                                # Normalize the BrowseAI data to our format
-                                normalized = normalize_facebook_marketplace_item(listing)
-                                
-                                # Validate required fields
-                                make = normalized.get("make")
-                                model = normalized.get("model")
-                                year = normalized.get("year", 0)
-                                price = normalized.get("price", 0)
-                                
-                                if (make and model and year >= 1900 and year <= 2030 and 
-                                    price > 0 and make.lower() not in ["unknown", "n/a", "none", ""] and 
-                                    model.lower() not in ["unknown", "n/a", "none", ""]):
-                                    
-                                    # Process the listing
-                                    listing_data = ListingIn(**normalized)
-                                    result = ingest_listing(listing_data)
-                                    processed_count += 1
-                                else:
-                                    failed_count += 1
-                                    
-                            except Exception as e:
-                                failed_count += 1
-                                continue
+                    try:
+                        # Get detailed task data including captured lists
+                        task_response = client.get(
+                            f"https://api.browse.ai/v2/robots/{robot_id}/tasks/{task_id}",
+                            headers=headers,
+                            timeout=45
+                        )
+                        
+                        if task_response.status_code == 200:
+                            task_detail = task_response.json()
+                            captured_lists = task_detail.get("result", {}).get("capturedLists", {})
+                            
+                            # Process each captured list (cars_for_sale)
+                            for list_name, listings in captured_lists.items():
+                                for listing in listings:
+                                    try:
+                                        # Normalize the BrowseAI data to our format
+                                        normalized = normalize_facebook_marketplace_item(listing)
+                                        
+                                        # Validate required fields
+                                        make = normalized.get("make")
+                                        model = normalized.get("model")
+                                        year = normalized.get("year", 0)
+                                        price = normalized.get("price", 0)
+                                        
+                                        if (make and model and year >= 1900 and year <= 2030 and 
+                                            price > 0 and make.lower() not in ["unknown", "n/a", "none", ""] and 
+                                            model.lower() not in ["unknown", "n/a", "none", ""]):
+                                            
+                                            # Process the listing
+                                            listing_data = ListingIn(**normalized)
+                                            result = ingest_listing(listing_data)
+                                            processed_count += 1
+                                        else:
+                                            failed_count += 1
+                                            
+                                    except Exception as e:
+                                        failed_count += 1
+                                        continue
+                        else:
+                            print(f"Failed to fetch task {task_id}: {task_response.status_code}")
+                            failed_count += 1
+                            
+                    except Exception as e:
+                        print(f"Error processing task {task_id}: {e}")
+                        failed_count += 1
+                        continue
             
             return {
                 "ok": True,
-                "message": f"Facebook Marketplace listings processed from {total_tasks} completed task(s) in the last 24 hours",
+                "message": f"Facebook Marketplace listings processed from {total_tasks} completed task(s) in the last 72 hours",
                 "tasks_processed": total_tasks,
                 "processed_count": processed_count,
                 "failed_count": failed_count,
@@ -556,3 +572,49 @@ def fetch_facebook_marketplace_listings():
         
     except Exception as e:
         return {"ok": False, "error": "processing_error", "message": str(e)}
+
+@router.get("/test-browseai")  
+def test_browseai_api_connectivity():
+    """
+    Simple test to check BrowseAI API connectivity
+    """
+    import httpx
+    import os
+    
+    try:
+        # BrowseAI API configuration
+        robot_id = "b7b01349-ff3d-4853-b1e7-92e391cadc08"
+        
+        # Get API key from environment variables
+        api_key = os.getenv("BROWSEAI_API_KEY")
+        if not api_key:
+            return {"ok": False, "error": "missing_api_key", "message": "BrowseAI API key not found"}
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        with httpx.Client() as client:
+            # Simple test - just fetch robot info
+            response = client.get(
+                f"https://api.browse.ai/v2/robots/{robot_id}",
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                return {
+                    "ok": True,
+                    "message": "BrowseAI API connection successful",
+                    "robot_info": response.json()
+                }
+            else:
+                return {
+                    "ok": False, 
+                    "error": "browseai_error",
+                    "message": f"BrowseAI API error: {response.status_code} - {response.text}"
+                }
+        
+    except Exception as e:
+        return {"ok": False, "error": "connection_error", "message": str(e)}
