@@ -707,3 +707,59 @@ def debug_browseai_tasks():
         
     except Exception as e:
         return {"ok": False, "error": "debug_error", "message": str(e)}
+
+@router.post("/trigger-browseai-task")  
+def trigger_new_browseai_task():
+    """
+    Manually trigger a new BrowseAI task for Facebook Marketplace data collection
+    """
+    import httpx
+    import os
+    
+    try:
+        # BrowseAI API configuration
+        robot_id = "b7b01349-ff3d-4853-b1e7-92e391cadc08"
+        
+        # Get API key from environment variables
+        api_key = os.getenv("BROWSEAI_API_KEY")
+        if not api_key:
+            return {"ok": False, "error": "missing_api_key", "message": "BrowseAI API key not found"}
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Trigger payload (using default parameters from robot)
+        trigger_payload = {
+            "originUrl": "https://www.facebook.com/marketplace/112298928786424/search?minPrice=30000&maxPrice=119000&daysSinceListed=7&query=BMW%20M3&exact=false",
+            "cars_for_sale_limit": 200
+        }
+        
+        with httpx.Client() as client:
+            # Trigger a new task
+            response = client.post(
+                f"https://api.browse.ai/v2/robots/{robot_id}/tasks",
+                headers=headers,
+                json={"inputParameters": trigger_payload},
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {
+                    "ok": True,
+                    "message": "BrowseAI task triggered successfully",
+                    "task_id": result.get("result", {}).get("robotTask", {}).get("id"),
+                    "status": result.get("result", {}).get("robotTask", {}).get("status"),
+                    "task_data": result
+                }
+            else:
+                return {
+                    "ok": False, 
+                    "error": "trigger_failed",
+                    "message": f"Failed to trigger BrowseAI task: {response.status_code} - {response.text}"
+                }
+        
+    except Exception as e:
+        return {"ok": False, "error": "trigger_error", "message": str(e)}
