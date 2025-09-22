@@ -763,3 +763,55 @@ def trigger_new_browseai_task():
         
     except Exception as e:
         return {"ok": False, "error": "trigger_error", "message": str(e)}
+
+@router.get("/check-browseai-task/{task_id}")  
+def check_browseai_task_status(task_id: str):
+    """
+    Check the status of a specific BrowseAI task
+    """
+    import httpx
+    import os
+    
+    try:
+        # BrowseAI API configuration
+        robot_id = "b7b01349-ff3d-4853-b1e7-92e391cadc08"
+        
+        # Get API key from environment variables
+        api_key = os.getenv("BROWSEAI_API_KEY")
+        if not api_key:
+            return {"ok": False, "error": "missing_api_key", "message": "BrowseAI API key not found"}
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        with httpx.Client() as client:
+            # Check specific task status
+            response = client.get(
+                f"https://api.browse.ai/v2/robots/{robot_id}/tasks/{task_id}",
+                headers=headers,
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                task_data = result.get("result", {})
+                return {
+                    "ok": True,
+                    "task_id": task_id,
+                    "status": task_data.get("status"),
+                    "createdAt": task_data.get("createdAt"),
+                    "finishedAt": task_data.get("finishedAt"),
+                    "capturedLists": task_data.get("capturedLists", {}),
+                    "full_data": result
+                }
+            else:
+                return {
+                    "ok": False, 
+                    "error": "task_check_failed",
+                    "message": f"Failed to check task status: {response.status_code} - {response.text}"
+                }
+        
+    except Exception as e:
+        return {"ok": False, "error": "check_error", "message": str(e)}
