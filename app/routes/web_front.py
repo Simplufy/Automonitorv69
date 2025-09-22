@@ -203,6 +203,7 @@ async def proxy_image(url: str):
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://www.facebook.com/',
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache'
             }
@@ -222,16 +223,44 @@ async def proxy_image(url: str):
                     }
                 )
             else:
-                # Return a simple placeholder if image fetch fails
-                return Response(
-                    content="data:image/svg+xml;base64," + base64.b64encode(
-                        f'<svg width="200" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="150" fill="#f0f0f0"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" font-family="Arial" font-size="14" fill="#666">🚗 Vehicle</text></svg>'.encode()
-                    ).decode(),
-                    media_type="image/svg+xml"
-                )
+                print(f"Image fetch failed for {url}: Status {response.status_code}, Response: {response.text[:200]}")
+                # Special handling for Facebook images that have security restrictions
+                if 'facebook' in url or 'fbcdn' in url:
+                    facebook_placeholder = '''<svg width="260" height="260" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 260">
+                        <defs>
+                            <linearGradient id="fbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#1877F2;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#42A5F5;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <rect width="260" height="260" fill="url(#fbGrad)"/>
+                        <circle cx="130" cy="110" r="40" fill="white" opacity="0.9"/>
+                        <path d="M 110 95 L 110 125 L 150 125 L 150 95 Z M 120 105 L 140 105 L 140 115 L 120 115 Z" fill="#1877F2"/>
+                        <text x="130" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white">Facebook</text>
+                        <text x="130" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="white" opacity="0.8">Marketplace</text>
+                        <text x="130" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="white" opacity="0.6">Image Protected</text>
+                    </svg>'''
+                    return Response(
+                        content=facebook_placeholder,
+                        media_type="image/svg+xml",
+                        headers={
+                            'Cache-Control': 'public, max-age=3600',
+                            'Access-Control-Allow-Origin': '*'
+                        }
+                    )
+                else:
+                    # Generic placeholder for other platforms
+                    return Response(
+                        content="data:image/svg+xml;base64," + base64.b64encode(
+                            f'<svg width="200" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="150" fill="#f0f0f0"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" font-family="Arial" font-size="14" fill="#666">🚗 Vehicle</text></svg>'.encode()
+                        ).decode(),
+                        media_type="image/svg+xml"
+                    )
                 
     except Exception as e:
         print(f"Error proxying image {url}: {e}")
+        import traceback
+        traceback.print_exc()
         # Return a simple placeholder on error
         return Response(
             content="data:image/svg+xml;base64," + base64.b64encode(
