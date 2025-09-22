@@ -456,10 +456,10 @@ def fetch_facebook_marketplace_listings():
         if not api_key:
             return {"ok": False, "error": "missing_api_key", "message": "BrowseAI API key not found"}
         
-        # Calculate timestamp for 48 hours ago to capture more tasks
+        # Calculate timestamp for 72 hours ago to capture more tasks
         now = datetime.now()
-        forty_eight_hours_ago = now - timedelta(hours=48)
-        from_timestamp = int(forty_eight_hours_ago.timestamp() * 1000)  # Convert to milliseconds
+        seventy_two_hours_ago = now - timedelta(hours=72)
+        from_timestamp = int(seventy_two_hours_ago.timestamp() * 1000)  # Convert to milliseconds
         
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -467,16 +467,16 @@ def fetch_facebook_marketplace_listings():
         }
         
         with httpx.Client() as client:
-            # Fetch completed tasks from last 24 hours
+            # Fetch completed tasks from last 72 hours
             response = client.get(
                 f"https://api.browse.ai/v2/robots/{robot_id}/tasks",
                 headers=headers,
                 params={
                     "status": "successful",
-                    "pageSize": 50,
+                    "pageSize": 100,
                     "page": 1
                 },
-                timeout=30
+                timeout=60
             )
             
             if response.status_code != 200:
