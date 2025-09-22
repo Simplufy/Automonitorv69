@@ -84,22 +84,22 @@
 
   <!-- Category Filters -->
   <div class="category-filters">
-    <button class="category-btn active profitable" data-category="PROFITABLE" onclick="setCategoryFilter(this)">
+    <button class="category-btn profitable" data-category="PROFITABLE" onclick="setCategoryFilter(this)">
       💰 Profitable Deals
     </button>
     <button class="category-btn maybe" data-category="MAYBE" onclick="setCategoryFilter(this)">
       🤔 Maybe Worth It
     </button>
-    <button class="category-btn unknown" data-category="UNKNOWN" onclick="setCategoryFilter(this)">
+    <button class="category-btn active unknown" data-category="UNKNOWN" onclick="setCategoryFilter(this)">
       ❓ Unknown Potential
     </button>
   </div>
 
   <!-- Results -->
-  <div id="results" hx-get="/listings?category=PROFITABLE&timeframe=7d" hx-trigger="load">
+  <div id="results" hx-get="/listings?category=UNKNOWN&timeframe=24h" hx-trigger="load">
     <div class="loading-state">
       <div class="loading-spinner"></div>
-      <p>Loading profitable deals...</p>
+      <p>Loading recent listings...</p>
     </div>
   </div>
 </div>
@@ -107,8 +107,8 @@
 <script>
 // State management
 let currentFilters = {
-  category: 'PROFITABLE',
-  timeframe: '7d',
+  category: 'UNKNOWN',
+  timeframe: '24h',
   search: '',
   minPrice: '',
   maxPrice: '',
