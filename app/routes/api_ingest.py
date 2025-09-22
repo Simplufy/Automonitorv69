@@ -618,3 +618,92 @@ def test_browseai_api_connectivity():
         
     except Exception as e:
         return {"ok": False, "error": "connection_error", "message": str(e)}
+
+@router.get("/debug/browseai-tasks")  
+def debug_browseai_tasks():
+    """
+    Debug endpoint to check BrowseAI tasks over the past week to identify missing weekend data
+    """
+    import httpx
+    import os
+    from datetime import datetime, timedelta
+    
+    try:
+        # BrowseAI API configuration
+        robot_id = "b7b01349-ff3d-4853-b1e7-92e391cadc08"
+        
+        # Get API key from environment variables
+        api_key = os.getenv("BROWSEAI_API_KEY")
+        if not api_key:
+            return {"ok": False, "error": "missing_api_key", "message": "BrowseAI API key not found"}
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        with httpx.Client() as client:
+            # Get tasks from the past week to investigate weekend gap
+            response = client.get(
+                f"https://api.browse.ai/v2/robots/{robot_id}/tasks",
+                headers=headers,
+                params={
+                    "pageSize": 100,
+                    "page": 1
+                },
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                return {
+                    "ok": False, 
+                    "error": "browseai_error",
+                    "message": f"BrowseAI API error: {response.status_code} - {response.text}"
+                }
+            
+            tasks_data = response.json()
+            tasks = tasks_data.get("result", {}).get("robotTasks", {}).get("items", [])
+            
+            # Analyze tasks by date
+            task_analysis = {}
+            weekend_tasks = []
+            
+            for task in tasks:
+                # Convert timestamp to readable date
+                created_at = task.get("createdAt", 0)
+                if created_at:
+                    # BrowseAI timestamps are in milliseconds
+                    task_date = datetime.fromtimestamp(created_at / 1000)
+                    date_key = task_date.strftime("%Y-%m-%d")
+                    
+                    if date_key not in task_analysis:
+                        task_analysis[date_key] = []
+                    
+                    task_info = {
+                        "id": task.get("id"),
+                        "status": task.get("status"),
+                        "createdAt": task_date.strftime("%Y-%m-%d %H:%M:%S"),
+                        "finishedAt": None
+                    }
+                    
+                    finished_at = task.get("finishedAt")
+                    if finished_at:
+                        task_info["finishedAt"] = datetime.fromtimestamp(finished_at / 1000).strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    task_analysis[date_key].append(task_info)
+                    
+                    # Check if this is a weekend task (Sept 20-21)
+                    if date_key in ["2025-09-20", "2025-09-21", "2025-09-19"]:
+                        weekend_tasks.append(task_info)
+            
+            return {
+                "ok": True,
+                "message": "BrowseAI task analysis completed",
+                "total_tasks": len(tasks),
+                "tasks_by_date": task_analysis,
+                "weekend_tasks": weekend_tasks,
+                "missing_dates": [date for date in ["2025-09-19", "2025-09-20", "2025-09-21"] if date not in task_analysis]
+            }
+        
+    except Exception as e:
+        return {"ok": False, "error": "debug_error", "message": str(e)}
